@@ -40,7 +40,7 @@ $ python -m pip install -e .
 | Command | What it does |
 | --- | --- |
 | `pagewright new PATH [--force]` | Creates a site with sample posts, a plugin and an editable copy of the default theme in `themes/default`. |
-| `pagewright build [-s SITE] [--drafts] [--clean] [--force] [--base-url URL]` | Builds into `public/`. Only outputs whose inputs changed are rendered again; `--force` renders everything, `--clean` empties the folder first. |
+| `pagewright build [-s SITE] [--drafts] [--clean] [--force] [--base-url URL] [--profile [N]]` | Builds into `public/`. Only outputs whose inputs changed are rendered again; `--force` renders everything, `--clean` empties the folder first, `--profile` lists the slowest outputs and steps. |
 | `pagewright serve [-s SITE] [--port 8000] [--host 127.0.0.1] [--no-drafts]` | Builds, serves and rebuilds on every save. Open pages reload themselves. Shows drafts unless `--no-drafts`. |
 | `pagewright post "Title" [-s SITE] [--section posts]` | Creates `content/posts/YYYY-MM-DD-title.md` as a draft. |
 

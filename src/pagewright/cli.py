@@ -42,6 +42,15 @@ def cmd_build(args: argparse.Namespace) -> int:
     site = Site(args.site, drafts=args.drafts, base_url=args.base_url)
     report = site.build(clean=args.clean, force=args.force)
     print(f"Built {site.config.output_path}: {report.summary()}")
+    if args.profile:
+        slowest = report.slowest(args.profile)
+        if slowest:
+            total = report.seconds or 1e-9
+            width = max(len(name) for name, _ in slowest)
+            hint = "" if args.force else "; unchanged outputs aren't rendered, add --force to time everything"
+            print(f"\nSlowest {len(slowest)} (of {len(report.timings)} timed{hint}):")
+            for name, seconds in slowest:
+                print(f"  {name:<{width}}  {seconds * 1000:7.1f} ms  {seconds / total:4.0%}")
     return 0
 
 
@@ -97,6 +106,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--clean", action="store_true", help="empty the output folder first")
     p.add_argument("--force", action="store_true", help="re-render everything, ignoring the cache")
     p.add_argument("--base-url", help="override base_url (e.g. for a preview deploy)")
+    p.add_argument("--profile", type=int, nargs="?", const=10, default=0, metavar="N",
+                   help="show the N slowest outputs and build steps (default 10)")
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("serve", help="dev server with live reload", parents=[site])

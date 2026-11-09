@@ -23,6 +23,7 @@ First version. Everything is new:
 - `page.prev`, `page.next` and `page.related`, shown at the end of posts in the default theme.
 - `aliases` in front matter: redirect pages from old URLs.
 - A feed for each section and tag (`/posts/feed.xml`, `/tags/python/feed.xml`), linked from their pages.
+- `pagewright build --profile [N]` shows the slowest outputs and build steps.
 
 ### Fixed before release
 

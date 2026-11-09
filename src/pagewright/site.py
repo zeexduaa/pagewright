@@ -57,6 +57,10 @@ class BuildReport:
     pages: int = 0
     drafts_skipped: int = 0
     seconds: float = 0.0
+    timings: dict[str, float] = field(default_factory=dict)  # seconds per rendered output and build step
+
+    def slowest(self, count: int = 10) -> list[tuple[str, float]]:
+        return sorted(self.timings.items(), key=lambda kv: -kv[1])[:count]
 
     def summary(self) -> str:
         parts = [f"{self.pages} page(s)", f"{len(self.rendered)} written", f"{len(self.skipped)} unchanged"]
@@ -422,6 +426,7 @@ class Site:
     def build(self, clean: bool = False, force: bool = False) -> BuildReport:
         started = time.perf_counter()
         report = self.load()
+        report.timings["(reading and converting content)"] = time.perf_counter() - started
         output = self.config.output_path
         cache_path = self.root / CACHE_FILE
         if clean and output.exists():
@@ -447,15 +452,20 @@ class Site:
             page = extra.get("page")
             context = {"site": site, "page": page, "content": page.content if page else Markup(""),
                        "toc": page.toc if page else Markup(""), **extra}
+            began = time.perf_counter()
             try:
                 html = self.env.render(template, context)
             except TemplateError as exc:
                 raise BuildError(f"{exc} (while rendering {path})") from None
+            report.timings[path] = time.perf_counter() - began
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(html, encoding="utf-8")
             report.rendered.append(path)
 
-        for path, text in self._extra_files(site).items():
+        began = time.perf_counter()
+        extra_files = self._extra_files(site)
+        report.timings["(feeds, sitemap, search index, redirects)"] = time.perf_counter() - began
+        for path, text in extra_files.items():
             target = output / path
             written[path] = _digest(text)
             if previous.get(path) == written[path] and target.exists():
@@ -465,8 +475,10 @@ class Site:
             target.write_text(text, encoding="utf-8")
             report.rendered.append(path)
 
+        began = time.perf_counter()
         static = self._copy_static(output, previous, written)
         report.copied = static
+        report.timings["(copying static files)"] = time.perf_counter() - began
 
         for path in sorted(set(previous) - set(written)):
             stale = output / path

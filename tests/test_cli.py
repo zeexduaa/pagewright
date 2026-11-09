@@ -74,3 +74,14 @@ def test_version(capsys):
         main(["--version"])
     assert exc.value.code == 0
     assert "pagewright 0.1.0" in capsys.readouterr().out
+
+
+def test_build_profile_lists_slowest_outputs(site_dir, capsys):
+    code, out, _ = run(capsys, "build", "-s", str(site_dir), "--profile", "3")
+    assert code == 0 and "Slowest 3 (of" in out
+    rows = [line for line in out.splitlines() if line.startswith("  ")]
+    assert len(rows) == 3 and all(" ms " in row for row in rows)
+    _, out, _ = run(capsys, "build", "-s", str(site_dir), "--profile")
+    assert "posts/" not in out.split("Slowest")[1]  # nothing re-rendered, so no page timings
+    _, out, _ = run(capsys, "build", "-s", str(site_dir))
+    assert "Slowest" not in out

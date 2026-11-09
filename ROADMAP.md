@@ -50,7 +50,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [ ] **OS file events**: use inotify / FSEvents / ReadDirectoryChangesW when available, falling back to polling. (L)
 - [ ] **`now` in fingerprints**: today, templates using `now` aren't re-rendered as time passes. Track which templates read `now` and rebuild them daily (or always). (M)
 - [ ] **Partial reloads**: only reload the page being viewed, or just swap CSS, when that's all that changed. (M)
-- [ ] **Build profile**: `pagewright build --profile` shows the slowest templates and pages. (S)
+- [x] **Build profile**: `pagewright build --profile` shows the slowest templates and pages. (S)
 - [ ] **Link checker**: `pagewright check` finds broken internal links and missing images. (M)
 
 ## v1.0: Release
