@@ -124,3 +124,8 @@ li.task-list-item input { margin: 0 .45em 0 0; vertical-align: -.1em; accent-col
 .footnote-backref { text-decoration: none; margin-left: .15em; }
 :target { scroll-margin-top: 1.5rem; }
 li:target, sup:target { background: var(--accent-soft); border-radius: 4px; }
+
+/* Definition lists */
+.prose dl { margin: 1.2rem 0; }
+.prose dt { font-weight: 600; margin-top: .8rem; }
+.prose dd { margin: .2rem 0 0 1.4rem; }

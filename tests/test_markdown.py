@@ -306,3 +306,17 @@ def test_footnotes():
 
 def test_unused_footnotes_are_left_out():
     assert render("No refs.\n\n[^x]: Unused.") == "<p>No refs.</p>"
+
+
+def test_definition_lists():
+    out = render("Apple\n: A red *fruit*\n  that keeps doctors away.\n\n: A company.\n\n"
+                 "Orange\nTangerine\n: Citrus.\n\nAfter.")
+    assert out == ("<dl>\n<dt>Apple</dt>\n<dd>A red <em>fruit</em>\nthat keeps doctors away.</dd>\n"
+                   "<dd>A company.</dd>\n<dt>Orange</dt>\n<dt>Tangerine</dt>\n<dd>Citrus.</dd>\n</dl>\n<p>After.</p>")
+
+
+def test_colons_that_are_not_definitions():
+    assert render(": starts with a colon") == "<p>: starts with a colon</p>"
+    assert render("ratio 1:2\nnext") == "<p>ratio 1:2\nnext</p>"
+    assert render("# Title\n: no") == '<h1 id="title">Title</h1>\n<p>: no</p>'
+    assert render(":no space") == "<p>:no space</p>"

@@ -91,6 +91,7 @@ def slugify(text: str) -> str:
 # ---- Inline --------------------------------------------------------------------------------
 
 SAFE_URL = re.compile(r"^(?:https?:|mailto:|tel:|ftp:|#|/|\./|\.\./|[^:/?#]*(?:[/?#]|$))", re.IGNORECASE)
+DEF_LINE = re.compile(r"^ {0,3}:[ \t]+(?=\S)")
 FOOTNOTE_REF = re.compile(r"\[\^([\w-]{1,64})\]")
 REF_DEF = re.compile(r"^ {0,3}\[(?!\^)([^\[\]]{1,999})\]:[ \t]*(<[^<>\n]*>|\S+)"
                      r"(?:[ \t]+(\"[^\"]*\"|'[^']*'|\([^()]*\)))?[ \t]*$")
@@ -547,8 +548,54 @@ class Markdown:
                     out.append(html_table)
                     continue
 
+            if self._starts_definition(lines, i):
+                i = self._definition_list(lines, i, out)
+                continue
+
             i = self._paragraph(lines, i, out)
         return "\n".join(out)
+
+    def _starts_definition(self, lines: list[str], i: int) -> bool:
+        """One to five term lines followed by a ": definition" line."""
+        j = i
+        while j < len(lines) and j - i < 5 and lines[j].strip() and not DEF_LINE.match(lines[j]):
+            if j > i and self._starts_block(lines[j]):
+                return False
+            j += 1
+        return i < j < len(lines) and bool(DEF_LINE.match(lines[j]))
+
+    def _definition_list(self, lines: list[str], i: int, out: list[str]) -> int:
+        """Term
+        : Definition (more lines indented by two or more spaces continue it)
+
+        Several terms can share definitions, a term can have several, and a blank line
+        between entries is allowed."""
+        n = len(lines)
+        parts: list[str] = []
+        while i < n:
+            terms = []
+            while i < n and lines[i].strip() and not DEF_LINE.match(lines[i]):
+                terms.append(lines[i].strip())
+                i += 1
+            if not terms or i >= n or not DEF_LINE.match(lines[i]):
+                i -= len(terms)  # not followed by a definition: leave these lines for the next block
+                break
+            parts.extend(f"<dt>{self._inline.render(t)}</dt>" for t in terms)
+            while i < n and DEF_LINE.match(lines[i]):
+                body = [DEF_LINE.sub("", lines[i], count=1)]
+                i += 1
+                while i < n and lines[i].startswith("  ") and lines[i].strip():
+                    body.append(lines[i].strip())
+                    i += 1
+                parts.append(f"<dd>{self._inline.render(chr(10).join(body))}</dd>")
+                # A blank line may separate this from the next definition or entry.
+                if i + 1 < n and not lines[i].strip() and (
+                        DEF_LINE.match(lines[i + 1]) or self._starts_definition(lines, i + 1)):
+                    i += 1
+            if i < n and not lines[i].strip():
+                break
+        out.append("<dl>\n" + "\n".join(parts) + "\n</dl>")
+        return i
 
     def _fenced(self, lines: list[str], i: int, m: re.Match[str], out: list[str]) -> int:
         indent, fence, info = len(m.group(1)), m.group(2), m.group(3)

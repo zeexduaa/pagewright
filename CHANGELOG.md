@@ -25,6 +25,7 @@ First version. Everything is new:
 - A feed for each section and tag (`/posts/feed.xml`, `/tags/python/feed.xml`), linked from their pages.
 - `pagewright build --profile [N]` shows the slowest outputs and build steps.
 - Reference-style links and footnotes in Markdown.
+- Definition lists in Markdown.
 
 ### Fixed before release
 
