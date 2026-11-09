@@ -100,3 +100,12 @@ def test_load_pages_skips_hidden_and_underscore_files(tmp_path):
 def test_bom_and_windows_newlines():
     page = parse_page('﻿+++\r\ntitle = "T"\r\n+++\r\nBody', "a.md")
     assert page.title == "T" and page.body.strip() == "Body"
+
+
+def test_footnote_markers_are_left_out_of_summaries():
+    page = parse_page("First paragraph[^1] here.\n\n[^1]: The note.\n", "posts/a.md")
+    page.render_markdown(Markdown())
+    assert "footnote" not in page.summary and "First paragraph here." in page.summary
+    page = parse_page("Intro[^1].\n\n<!--more-->\n\nRest.\n\n[^1]: Note.\n", "posts/b.md")
+    page.render_markdown(Markdown())
+    assert "[^1]" not in page.summary and "Intro." in page.summary

@@ -9,8 +9,9 @@ Everything you can use in posts, in one place.<!--more-->
 ## Text
 
 Use *emphasis*, **strong**, ~~strikethrough~~ and `inline code`.
-Links look like [this](https://example.com "A title") and images like
-`![alt text](/image.png)`.
+Links look like [this](https://example.com "A title") or, to keep long URLs
+out of the way, [like this][docs]. Images look like `![alt text](/image.png)`.
+Footnotes work too.[^why]
 
 ## Lists
 
@@ -18,6 +19,9 @@ Links look like [this](https://example.com "A title") and images like
   - can nest
 1. Numbered lists
 2. too
+
+- [x] Task lists
+- [ ] with boxes to tick
 
 ## Code
 
@@ -31,7 +35,8 @@ def greet(name: str) -> str:
 | Feature        | Supported |
 |:---------------|:---------:|
 | Tables         | yes       |
-| Footnotes      | not yet   |
+| Footnotes      | yes       |
+| Math           | not yet   |
 
 ## Quotes
 
@@ -40,3 +45,6 @@ def greet(name: str) -> str:
 ---
 
 Set `toc = true` in the front matter for a table of contents like the one above.
+
+[docs]: https://github.com/zeexduaa/pagewright/blob/main/docs/content.md "Content docs"
+[^why]: Notes collect at the end of the page, with links back to where they're used.

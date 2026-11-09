@@ -49,6 +49,8 @@ Supported:
 - paragraphs, hard line breaks (two trailing spaces or `\`);
 - `*emphasis*`, `**strong**`, `***both***`, `~~strikethrough~~`, `` `code` ``;
 - links `[text](url "title")`, images `![alt](src)`, autolinks `<https://…>`;
+- reference links `[text][label]`, `[label][]` and `[label]`, with `[label]: url "title"` anywhere in the page (labels ignore case);
+- footnotes: `text[^1]` and `[^1]: the note` (indent further paragraphs by four spaces); notes are numbered in order of use and listed at the end with links back;
 - block quotes (nested, with lazy continuation lines);
 - bullet and numbered lists (nested, tight or loose, any start number);
 - fenced code (```` ``` ```` or `~~~`, with a language class) and indented code;
@@ -60,7 +62,7 @@ Supported:
 
 `javascript:`, `vbscript:` and `data:` URLs in links and images are replaced with `#`. Put images in `static/` instead.
 
-Not yet supported (see the roadmap): reference-style links, footnotes, definition lists, syntax highlighting and smart quotes.
+Not yet supported (see the roadmap): definition lists, syntax highlighting and smart quotes.
 
 ## Summaries
 
@@ -69,6 +71,8 @@ A post's summary, shown on list pages and in the feed, is:
 1. `summary` from the front matter, if set;
 2. otherwise everything before `<!--more-->`;
 3. otherwise the first paragraph.
+
+Footnote markers are left out of summaries, since their notes aren't on list pages.
 
 ## Data files
 

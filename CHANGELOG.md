@@ -24,6 +24,7 @@ First version. Everything is new:
 - `aliases` in front matter: redirect pages from old URLs.
 - A feed for each section and tag (`/posts/feed.xml`, `/tags/python/feed.xml`), linked from their pages.
 - `pagewright build --profile [N]` shows the slowest outputs and build steps.
+- Reference-style links and footnotes in Markdown.
 
 ### Fixed before release
 

@@ -267,3 +267,42 @@ def test_task_lists():
     assert '<p><input type="checkbox" disabled /> one</p>' in loose
     assert "<li>[ ] numbered</li>" in render("1. [ ] numbered")  # GitHub only does bullets
     assert "<li>[ ]</li>" in render("- [ ]")                      # needs text after the box
+
+
+def test_reference_links():
+    text = ("[Docs][d], [d][], [D], [image ![x][img]][d], [unknown] and [kept](/inline).\n\n"
+            '[d]: https://example.com/docs "The docs"\n'
+            "[IMG]:   </a b.png>\n")
+    out = render(text)
+    assert out.count('<a href="https://example.com/docs" title="The docs">') == 4
+    assert '<img src="/a%20b.png" alt="x" />' in out
+    assert "[unknown]" in out and '<a href="/inline">kept</a>' in out
+    assert "[d]:" not in out
+
+
+def test_reference_definitions_follow_block_rules():
+    assert render("```\n[d]: /x\n```\n[d]") == "<pre><code>[d]: /x\n</code></pre>\n<p>[d]</p>"
+    assert render("text\n[d]: /x") == "<p>text\n[d]: /x</p>"          # can't interrupt a paragraph
+    assert render("[d]\n\n[d]: /first\n[d]: /second") == '<p><a href="/first">d</a></p>'  # first wins
+    assert render("[a  b]\n\n[A B]: /ab") == '<p><a href="/ab">a  b</a></p>'          # case and spaces
+    assert 'href="#"' in render("[x][evil]\n\n[evil]: javascript:alert(1)")
+
+
+def test_footnotes():
+    out = render("One[^a] two[^b] three[^a], none[^zzz].\n\n"
+                 "[^a]: First, with *emphasis*.\n"
+                 "[^b]: Second.\n\n"
+                 "    Second paragraph, citing[^a].\n")
+    assert '<sup class="footnote-ref"><a href="#fn-a" id="fnref-a" role="doc-noteref">1</a></sup>' in out
+    assert 'id="fnref-b"' in out and ">2</a></sup>" in out
+    assert 'id="fnref-a-2"' in out and 'id="fnref-a-3"' in out
+    assert "none[^zzz]" in out
+    notes = out.split('<section class="footnotes"')[1]
+    assert notes.index('id="fn-a"') < notes.index('id="fn-b"')
+    assert "<em>emphasis</em>" in notes and "<p>Second paragraph" in notes
+    for anchor in ("fnref-a", "fnref-a-2", "fnref-a-3", "fnref-b"):
+        assert f'href="#{anchor}" class="footnote-backref"' in notes
+
+
+def test_unused_footnotes_are_left_out():
+    assert render("No refs.\n\n[^x]: Unused.") == "<p>No refs.</p>"

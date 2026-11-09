@@ -25,6 +25,7 @@ import html
 import html.entities
 import re
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 # ---- Results -------------------------------------------------------------------------------
@@ -90,6 +91,17 @@ def slugify(text: str) -> str:
 # ---- Inline --------------------------------------------------------------------------------
 
 SAFE_URL = re.compile(r"^(?:https?:|mailto:|tel:|ftp:|#|/|\./|\.\./|[^:/?#]*(?:[/?#]|$))", re.IGNORECASE)
+FOOTNOTE_REF = re.compile(r"\[\^([\w-]{1,64})\]")
+REF_DEF = re.compile(r"^ {0,3}\[(?!\^)([^\[\]]{1,999})\]:[ \t]*(<[^<>\n]*>|\S+)"
+                     r"(?:[ \t]+(\"[^\"]*\"|'[^']*'|\([^()]*\)))?[ \t]*$")
+NOTE_DEF = re.compile(r"^ {0,3}\[\^([\w-]{1,64})\]:[ \t]?(.*)$")
+
+
+def normalize_label(label: str) -> str:
+    """Reference labels match case-insensitively, with runs of whitespace treated as one space."""
+    return " ".join(label.split()).casefold()
+
+
 ESCAPABLE = r"!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~"
 INLINE_TAG = re.compile(
     r"<(?:/?[A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z_:][\w:.-]*(?:\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+))?)*\s*/?"
@@ -128,8 +140,11 @@ class InlineParser:
 
     PLACEHOLDER = "\x00{}\x00"
 
-    def __init__(self, allow_html: bool = True):
+    def __init__(self, allow_html: bool = True, refs: dict[str, tuple[str, str | None]] | None = None,
+                 footnote: Callable[[str], str | None] | None = None):
         self.allow_html = allow_html
+        self.refs = refs or {}          # normalized label -> (url, title)
+        self.footnote = footnote        # "[^id]" -> HTML for the reference, or None if undefined
 
     def render(self, text: str) -> str:
         self._stash: list[str] = []
@@ -208,6 +223,13 @@ class InlineParser:
                     out.append(self._keep(html_fragment))
                     i = end
                     continue
+            if ch == "[" and self.footnote and text.startswith("[^", i):
+                m = FOOTNOTE_REF.match(text, i)
+                ref = self.footnote(m.group(1)) if m else None
+                if m and ref:
+                    out.append(self._keep(ref))
+                    i = m.end()
+                    continue
             if ch == "[":
                 parsed = self._link(text, i, image=False)
                 if parsed:
@@ -264,6 +286,29 @@ class InlineParser:
             return None
         label = text[start + 1:i]
         rest = text[i + 1:]
+        inline = self._inline_destination(rest)
+        if inline:
+            url, title, consumed = inline
+        else:
+            # Reference links: [text][label], [label][] and [label]
+            m = re.match(r"\[([^\[\]]*)\]", rest)
+            key = normalize_label(m.group(1) if m and m.group(1).strip() else label)
+            if key not in self.refs or label.startswith("^"):
+                return None
+            url, title = self.refs[key]
+            consumed = m.end() if m else 0
+        title_attr = f' title="{escape(title)}"' if title else ""
+        end = i + 1 + consumed
+        href = escape(safe_url(url))
+        if image:
+            alt = re.sub(r"[*_`\[\]]", "", label)
+            return end, f'<img src="{href}" alt="{escape(alt)}"{title_attr} />'
+        inner = InlineParser(self.allow_html, self.refs, self.footnote).render(label)
+        return end, f'<a href="{href}"{title_attr}>{inner}</a>'
+
+    @staticmethod
+    def _inline_destination(rest: str) -> tuple[str, str | None, int] | None:
+        """Parses "(url "title")" at the start of ``rest``."""
         m = re.match(r"\(\s*(<[^<>\n]*>|[^\s()<>]*(?:\([^\s()<>]*\)[^\s()<>]*)*)"
                      r"(?:\s+(\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|\((?:[^()\\]|\\.)*\)))?\s*\)", rest)
         if not m:
@@ -273,17 +318,9 @@ class InlineParser:
             url = url[1:-1]
         url = re.sub(r"\\([" + ESCAPABLE + r"])", r"\1", url)
         title = m.group(2)
-        title_attr = ""
         if title:
-            title_text = re.sub(r"\\([" + ESCAPABLE + r"])", r"\1", title[1:-1])
-            title_attr = f' title="{escape(title_text)}"'
-        end = i + 1 + m.end()
-        href = escape(safe_url(url))
-        if image:
-            alt = re.sub(r"[*_`\[\]]", "", label)
-            return end, f'<img src="{href}" alt="{escape(alt)}"{title_attr} />'
-        inner = InlineParser(self.allow_html).render(label)
-        return end, f'<a href="{href}"{title_attr}>{inner}</a>'
+            title = re.sub(r"\\([" + ESCAPABLE + r"])", r"\1", title[1:-1])
+        return url, title, m.end()
 
     # -- emphasis --
 
@@ -339,10 +376,91 @@ class Markdown:
     def convert(self, text: str) -> Document:
         self._headings: list[Heading] = []
         self._used_ids: dict[str, int] = {}
-        self._inline = InlineParser(self.allow_html)
         lines = text.replace("\r\n", "\n").replace("\r", "\n").expandtabs(4).split("\n")
+        lines, refs, notes = self._definitions(lines)
+        self._notes = notes                    # footnote id -> its Markdown lines
+        self._note_order: list[str] = []       # ids in the order they're first referenced
+        self._note_uses: dict[str, int] = {}
+        self._inline = InlineParser(self.allow_html, refs, self._footnote_ref if notes else None)
         body = self._blocks(lines)
+        if self._note_order:
+            body += "\n" + self._footnote_section()
         return Document(body, self._headings)
+
+    # -- reference definitions and footnotes --
+
+    @staticmethod
+    def _definitions(lines: list[str]) -> tuple[list[str], dict[str, tuple[str, str | None]], dict[str, list[str]]]:
+        """Takes "[label]: url" and "[^note]: text" definitions out of the text (not from code)."""
+        kept: list[str] = []
+        refs: dict[str, tuple[str, str | None]] = {}
+        notes: dict[str, list[str]] = {}
+        fence: str | None = None
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            m = FENCE.match(line)
+            if fence is None and m:
+                fence = m.group(2)[0] * len(m.group(2))
+            elif fence is not None and re.match(rf"^ {{0,3}}{re.escape(fence[0])}{{{len(fence)},}}[ \t]*$", line):
+                fence = None
+            # A definition can't interrupt a paragraph: it needs a blank line, another definition or the start before it.
+            starts_block = not kept or not kept[-1].strip()
+            if fence is None and starts_block and not line.startswith("    "):
+                note = NOTE_DEF.match(line)
+                if note:
+                    body = [note.group(2)]
+                    i += 1
+                    while i < len(lines) and (lines[i].startswith("    ") or
+                                              (not lines[i].strip() and i + 1 < len(lines)
+                                               and lines[i + 1].startswith("    "))):
+                        body.append(lines[i][4:])
+                        i += 1
+                    notes.setdefault(note.group(1), body)  # the first definition wins
+                    continue
+                ref = REF_DEF.match(line)
+                if ref:
+                    url = ref.group(2)[1:-1] if ref.group(2).startswith("<") else ref.group(2)
+                    title = ref.group(3)[1:-1] if ref.group(3) else None
+                    refs.setdefault(normalize_label(ref.group(1)), (url, title))
+                    i += 1
+                    continue
+            kept.append(line)
+            i += 1
+        return kept, refs, notes
+
+    def _footnote_ref(self, note_id: str) -> str | None:
+        if note_id not in self._notes:
+            return None
+        if note_id not in self._note_order:
+            self._note_order.append(note_id)
+        number = self._note_order.index(note_id) + 1
+        uses = self._note_uses[note_id] = self._note_uses.get(note_id, 0) + 1
+        anchor = f"fnref-{note_id}" + (f"-{uses}" if uses > 1 else "")
+        return (f'<sup class="footnote-ref"><a href="#fn-{note_id}" id="{anchor}" '
+                f'role="doc-noteref">{number}</a></sup>')
+
+    def _footnote_section(self) -> str:
+        # Render every body first: a footnote may reference another one (or itself again), which
+        # adds uses, and every use needs a back-link.
+        bodies: dict[str, str] = {}
+        while len(bodies) < len(self._note_order):
+            note_id = self._note_order[len(bodies)]
+            bodies[note_id] = self._blocks(self._notes[note_id]) or ""
+        items = []
+        for number, note_id in enumerate(self._note_order, 1):
+            inner = bodies[note_id]
+            back = " ".join(
+                f'<a href="#fnref-{note_id}{"" if n == 1 else f"-{n}"}" class="footnote-backref" '
+                f'role="doc-backlink" aria-label="Back to reference {number}{"" if n == 1 else f"-{n}"}">↩</a>'
+                for n in range(1, self._note_uses.get(note_id, 1) + 1))
+            if inner.endswith("</p>"):
+                inner = inner[:-4] + " " + back + "</p>"
+            else:
+                inner += f"\n<p>{back}</p>"
+            items.append(f'<li id="fn-{note_id}" role="doc-endnote">\n{inner}\n</li>')
+        return ('<section class="footnotes" role="doc-endnotes">\n<hr />\n<ol>\n'
+                + "\n".join(items) + "\n</ol>\n</section>")
 
     # -- helpers --
 

@@ -115,3 +115,12 @@ li.task-list-item input { margin: 0 .45em 0 0; vertical-align: -.1em; accent-col
 .post-nav a:hover { text-decoration: underline; }
 .post-nav .next { margin-left: auto; text-align: right; }
 @media (max-width: 560px) { .post-nav a { max-width: 100%; } }
+
+/* Footnotes */
+.footnote-ref a { text-decoration: none; padding: 0 .1em; }
+.footnotes { margin-top: 2.5rem; font-size: .92em; color: var(--muted); }
+.footnotes hr { margin-bottom: 1rem; }
+.footnotes ol { padding-left: 1.4rem; }
+.footnote-backref { text-decoration: none; margin-left: .15em; }
+:target { scroll-margin-top: 1.5rem; }
+li:target, sup:target { background: var(--accent-soft); border-radius: 4px; }

@@ -29,12 +29,13 @@ from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .markdown import Heading, Markdown, slugify
+from .markdown import FOOTNOTE_REF, Heading, Markdown, slugify
 from .templates import Markup
 
 FRONT_MATTER = re.compile(r"\A\+\+\+[ \t]*\n(.*?)\n\+\+\+[ \t]*(?:\n|\Z)", re.DOTALL)
 DATED_NAME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})-(.+)$")
 MORE = "<!--more-->"
+FOOTNOTE_SUP = re.compile(r'<sup class="footnote-ref">.*?</sup>')
 FRONT_MATTER_FIELDS = {"title", "date", "updated", "draft", "tags", "slug", "url", "template",
                        "summary", "description", "weight", "toc", "extra", "aliases"}
 
@@ -108,11 +109,13 @@ class Page:
         self.headings = document.headings
         self.toc = Markup(document.toc_html())
         if not self.summary:
+            # Footnote markers are left out of summaries: their notes aren't on list pages or in feeds.
             if MORE in self.body:
-                self.summary = Markup(markdown.convert(self.body.split(MORE, 1)[0]).html)
+                before = FOOTNOTE_REF.sub("", self.body.split(MORE, 1)[0])
+                self.summary = Markup(markdown.convert(before).html)
             else:
                 first = re.search(r"<p>.*?</p>", document.html, re.DOTALL)
-                self.summary = Markup(first.group(0) if first else "")
+                self.summary = Markup(FOOTNOTE_SUP.sub("", first.group(0)) if first else "")
 
 
 def _as_date(value: Any, field_name: str, path: str) -> date | None:
