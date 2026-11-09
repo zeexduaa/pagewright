@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e . pytest
+      - name: Tests
+        run: python -m pytest -q
+      - name: Build a new site with the CLI
+        shell: bash
+        run: |
+          pagewright new "$RUNNER_TEMP/demo"
+          pagewright build -s "$RUNNER_TEMP/demo"
+          pagewright post "Smoke test" -s "$RUNNER_TEMP/demo"
+          pagewright build -s "$RUNNER_TEMP/demo" --drafts
+          test -f "$RUNNER_TEMP/demo/public/index.html"
+          test -f "$RUNNER_TEMP/demo/public/feed.xml"
+          test -f "$RUNNER_TEMP/demo/public/posts/smoke-test/index.html"
