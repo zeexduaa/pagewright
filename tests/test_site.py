@@ -75,7 +75,7 @@ def test_drafts_are_left_out_unless_asked(site_dir):
 
 def test_pagination(site_dir):
     write(site_dir / "pagewright.toml",
-          (site_dir / "pagewright.toml").read_text().replace("posts_per_page = 10", "posts_per_page = 2"))
+          (site_dir / "pagewright.toml").read_text(encoding="utf-8").replace("posts_per_page = 10", "posts_per_page = 2"))
     for i in range(1, 6):
         write(site_dir / f"content/posts/2026-03-0{i}-post-{i}.md", f"Post {i}")
     report = build(site_dir)
@@ -124,7 +124,7 @@ def test_second_build_renders_nothing(site_dir):
 def test_editing_a_post_body_rerenders_only_that_post(site_dir):
     build(site_dir)
     post = site_dir / "content/posts/2026-01-20-markdown-guide.md"
-    post.write_text(post.read_text().replace("## Quotes", "## Quotations"))
+    post.write_text(post.read_text(encoding="utf-8").replace("## Quotes", "## Quotations"))
     report = build(site_dir)
     # The post itself, plus the feeds it's in and the search index, which include full text. No list pages.
     assert sorted(report.rendered) == ["feed.xml", "posts/feed.xml", "posts/markdown-guide/index.html",
@@ -135,7 +135,7 @@ def test_editing_a_post_body_rerenders_only_that_post(site_dir):
 def test_changing_a_title_rerenders_lists(site_dir):
     build(site_dir)
     post = site_dir / "content/posts/2026-01-15-hello-world.md"
-    post.write_text(post.read_text().replace('title = "Hello, world"', 'title = "Hello again"'))
+    post.write_text(post.read_text(encoding="utf-8").replace('title = "Hello, world"', 'title = "Hello again"'))
     report = build(site_dir)
     assert {"index.html", "posts/index.html", "tags/meta/index.html"} <= set(report.rendered)
     assert "Hello again" in read(site_dir, "index.html")
@@ -178,7 +178,7 @@ def test_clean_and_force(site_dir):
 
 def test_corrupt_cache_means_a_full_rebuild(site_dir):
     build(site_dir)
-    (site_dir / ".pagewright-cache.json").write_text("{nope")
+    (site_dir / ".pagewright-cache.json").write_text("{nope", encoding="utf-8")
     assert len(build(site_dir).rendered) >= 13
 
 
@@ -187,7 +187,7 @@ def test_corrupt_cache_means_a_full_rebuild(site_dir):
 
 def test_example_plugin_adds_filters_data_and_hooks(site_dir, capsys):
     toml = site_dir / "pagewright.toml"
-    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["word_count"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('# plugins = ["word_count"]', 'plugins = ["word_count"]'))
     write(site_dir / "templates/partials/footer.html", "<footer>{{ site.data.total_words }} words</footer>")
     build(site_dir)
     assert "word_count:" in capsys.readouterr().out
@@ -200,7 +200,7 @@ def test_plugin_can_rewrite_markdown_and_html(site_dir):
           "def on_page_markdown(page, md):\n    return md.replace('Welcome', 'WELCOME')\n\n"
           "def on_page_html(page, html):\n    return html + '<!-- shouted -->'\n")
     toml = site_dir / "pagewright.toml"
-    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["shout"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('# plugins = ["word_count"]', 'plugins = ["shout"]'))
     build(site_dir)
     home = read(site_dir, "index.html")
     assert "WELCOME" in home and "<!-- shouted -->" in home
@@ -209,10 +209,10 @@ def test_plugin_can_rewrite_markdown_and_html(site_dir):
 def test_plugin_errors_name_the_plugin(site_dir):
     write(site_dir / "plugins/broken.py", "def on_site(site):\n    raise RuntimeError('oops')\n")
     toml = site_dir / "pagewright.toml"
-    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["broken"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('# plugins = ["word_count"]', 'plugins = ["broken"]'))
     with pytest.raises(BuildError, match="plugin 'broken' failed in on_site: oops"):
         build(site_dir)
-    toml.write_text(toml.read_text().replace('plugins = ["broken"]', 'plugins = ["missing"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('plugins = ["broken"]', 'plugins = ["missing"]'))
     with pytest.raises(BuildError, match="plugin 'missing' not found"):
         Site(site_dir)
 
@@ -273,7 +273,7 @@ def test_plugin_filters_can_be_a_dict_or_a_function(site_dir):
                                       "def template_globals():\n    return {'answer': 42}\n")
     write(site_dir / "templates/partials/footer.html", "<footer>{{ 'hi' | shout }} {{ answer }}</footer>")
     toml = site_dir / "pagewright.toml"
-    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["fn"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('# plugins = ["word_count"]', 'plugins = ["fn"]'))
     build(site_dir)
     assert "<footer>HI 42</footer>" in read(site_dir, "about/index.html")
 
@@ -285,7 +285,7 @@ def test_plugin_filters_can_be_a_dict_or_a_function(site_dir):
 def test_editing_a_plugin_rerenders_pages(site_dir):
     write(site_dir / "plugins/tag.py", "def on_page_html(page, html):\n    return html + '<!-- v1 -->'\n")
     toml = site_dir / "pagewright.toml"
-    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["tag"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('# plugins = ["word_count"]', 'plugins = ["tag"]'))
     build(site_dir)
     write(site_dir / "plugins/tag.py", "def on_page_html(page, html):\n    return html + '<!-- v2 -->'\n")
     report = build(site_dir)
@@ -354,12 +354,12 @@ def test_bad_or_clashing_data_files_are_errors(site_dir):
 
 def test_plugin_data_changes_rerender_pages_that_show_it(site_dir):
     toml = site_dir / "pagewright.toml"
-    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["word_count"]'))
+    toml.write_text(toml.read_text(encoding="utf-8").replace('# plugins = ["word_count"]', 'plugins = ["word_count"]'))
     write(site_dir / "templates/partials/footer.html", "<footer>{{ site.data.total_words }}</footer>")
     build(site_dir)
     before = read(site_dir, "about/index.html")
     post = site_dir / "content/posts/2026-01-15-hello-world.md"
-    post.write_text(post.read_text() + "\nThree more words.\n")
+    post.write_text(post.read_text(encoding="utf-8") + "\nThree more words.\n")
     build(site_dir)
     assert read(site_dir, "about/index.html") != before
 

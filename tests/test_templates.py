@@ -142,14 +142,14 @@ def files(tmp_path):
     site.mkdir()
     (theme / "base.html").write_text(
         "<title>{% block title %}Site{% endblock %}</title><main>{% block content %}{% endblock %}</main>"
-        "{% include 'footer.html' %}"
+        "{% include 'footer.html' %}", encoding="utf-8"
     )
-    (theme / "footer.html").write_text("<footer>theme footer</footer>")
+    (theme / "footer.html").write_text("<footer>theme footer</footer>", encoding="utf-8")
     (theme / "post.html").write_text(
         "{% extends 'base.html' %}{% block title %}{{ page.title }} | {{ super() }}{% endblock %}"
-        "{% block content %}<h1>{{ page.title }}</h1>{% endblock %}ignored outside blocks"
+        "{% block content %}<h1>{{ page.title }}</h1>{% endblock %}ignored outside blocks", encoding="utf-8"
     )
-    (site / "footer.html").write_text("<footer>site footer {{ year }}</footer>")
+    (site / "footer.html").write_text("<footer>site footer {{ year }}</footer>", encoding="utf-8")
     return Environment([site, theme])
 
 
@@ -159,9 +159,9 @@ def test_extends_blocks_super_and_override_order(files):
 
 
 def test_multi_level_inheritance(tmp_path):
-    (tmp_path / "a.html").write_text("[{% block x %}A{% endblock %}]")
-    (tmp_path / "b.html").write_text("{% extends 'a.html' %}{% block x %}B{{ super() }}{% endblock %}")
-    (tmp_path / "c.html").write_text("{% extends 'b.html' %}{% block x %}C{{ super() }}{% endblock %}")
+    (tmp_path / "a.html").write_text("[{% block x %}A{% endblock %}]", encoding="utf-8")
+    (tmp_path / "b.html").write_text("{% extends 'a.html' %}{% block x %}B{{ super() }}{% endblock %}", encoding="utf-8")
+    (tmp_path / "c.html").write_text("{% extends 'b.html' %}{% block x %}C{{ super() }}{% endblock %}", encoding="utf-8")
     assert Environment([tmp_path]).render("c.html") == "[CBA]"
 
 
@@ -174,10 +174,10 @@ def test_template_cache_reloads_changed_files(tmp_path):
     import time
 
     path = tmp_path / "t.html"
-    path.write_text("one")
+    path.write_text("one", encoding="utf-8")
     env = Environment([tmp_path])
     assert env.render("t.html") == "one"
-    path.write_text("two")
+    path.write_text("two", encoding="utf-8")
     stat = path.stat()
     os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000))
     assert env.render("t.html") == "two"
@@ -240,8 +240,8 @@ def test_strict_mode_reports_missing_variables():
 
 
 def test_extends_loop_is_detected(tmp_path):
-    (tmp_path / "a.html").write_text("{% extends 'b.html' %}")
-    (tmp_path / "b.html").write_text("{% extends 'a.html' %}")
+    (tmp_path / "a.html").write_text("{% extends 'b.html' %}", encoding="utf-8")
+    (tmp_path / "b.html").write_text("{% extends 'a.html' %}", encoding="utf-8")
     with pytest.raises(TemplateError, match="loop"):
         Environment([tmp_path]).render("a.html")
 
@@ -313,8 +313,8 @@ def test_errors_inside_filters_and_calls_say_where(env):
 
 
 def test_errors_in_a_block_name_the_child_template(tmp_path):
-    (tmp_path / "base.html").write_text("<main>\n{% block content %}{% endblock %}\n</main>")
-    (tmp_path / "page.html").write_text('{% extends "base.html" %}\n{% block content %}\nfine\n{{ none | length }}\n{% endblock %}')
+    (tmp_path / "base.html").write_text("<main>\n{% block content %}{% endblock %}\n</main>", encoding="utf-8")
+    (tmp_path / "page.html").write_text('{% extends "base.html" %}\n{% block content %}\nfine\n{{ none | length }}\n{% endblock %}', encoding="utf-8")
     env = Environment([tmp_path])
     with pytest.raises(TemplateError) as exc:
         env.render("page.html")

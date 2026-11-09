@@ -19,7 +19,7 @@ def test_new_creates_a_site_that_builds(tmp_path, capsys):
     assert (target / "pagewright.toml").is_file()
     assert (target / "themes" / "default" / "templates" / "base.html").is_file()
     assert (target / "static").is_dir() and not (target / "static" / ".gitkeep").exists()
-    assert "public/" in (target / ".gitignore").read_text()
+    assert "public/" in (target / ".gitignore").read_text(encoding="utf-8")
 
     code, out, _ = run(capsys, "build", "-s", str(target))
     assert code == 0 and "16 written" in out
@@ -31,7 +31,7 @@ def test_new_refuses_a_folder_with_files_unless_forced(tmp_path, capsys):
     code, _, err = run(capsys, "new", str(tmp_path))
     assert code == 1 and "isn't empty" in err
     code, _, _ = run(capsys, "new", str(tmp_path), "--force")
-    assert code == 0 and (tmp_path / "notes.txt").read_text() == "mine"
+    assert code == 0 and (tmp_path / "notes.txt").read_text(encoding="utf-8") == "mine"
 
 
 def test_build_is_incremental_and_force_rerenders(site_dir, capsys):
@@ -44,7 +44,7 @@ def test_build_is_incremental_and_force_rerenders(site_dir, capsys):
 
 def test_build_base_url_override(site_dir, capsys):
     run(capsys, "build", "-s", str(site_dir), "--base-url", "https://preview.example.org")
-    assert "https://preview.example.org/" in (site_dir / "public" / "sitemap.xml").read_text()
+    assert "https://preview.example.org/" in (site_dir / "public" / "sitemap.xml").read_text(encoding="utf-8")
 
 
 def test_build_reports_errors_without_a_traceback(tmp_path, capsys):
@@ -56,13 +56,13 @@ def test_post_creates_a_dated_draft(site_dir, capsys):
     code, out, _ = run(capsys, "post", 'Why "quotes" matter', "-s", str(site_dir))
     assert code == 0 and "draft" in out
     path = site_dir / "content" / "posts" / f"{date.today().isoformat()}-why-quotes-matter.md"
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     assert 'title = "Why \\"quotes\\" matter"' in text and "draft = true" in text
 
     run(capsys, "build", "-s", str(site_dir))
     assert not (site_dir / "public" / "posts" / "why-quotes-matter").exists()
     run(capsys, "build", "-s", str(site_dir), "--drafts")
-    page = (site_dir / "public" / "posts" / "why-quotes-matter" / "index.html").read_text()
+    page = (site_dir / "public" / "posts" / "why-quotes-matter" / "index.html").read_text(encoding="utf-8")
     assert "Why &quot;quotes&quot; matter" in page or 'Why &#34;quotes&#34; matter' in page
 
     code, _, err = run(capsys, "post", 'Why "quotes" matter', "-s", str(site_dir))

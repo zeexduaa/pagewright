@@ -87,12 +87,12 @@ def test_bad_front_matter_is_explained(text, message):
 
 def test_load_pages_skips_hidden_and_underscore_files(tmp_path):
     (tmp_path / "posts").mkdir()
-    (tmp_path / "posts" / "a.md").write_text("A")
-    (tmp_path / "posts" / "_index.md").write_text("index")
+    (tmp_path / "posts" / "a.md").write_text("A", encoding="utf-8")
+    (tmp_path / "posts" / "_index.md").write_text("index", encoding="utf-8")
     (tmp_path / "_drafts").mkdir()
-    (tmp_path / "_drafts" / "secret.md").write_text("no")
-    (tmp_path / ".hidden.md").write_text("no")
-    (tmp_path / "notes.txt").write_text("not markdown")
+    (tmp_path / "_drafts" / "secret.md").write_text("no", encoding="utf-8")
+    (tmp_path / ".hidden.md").write_text("no", encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("not markdown", encoding="utf-8")
     assert [p.source for p in load_pages(tmp_path)] == ["posts/_index.md", "posts/a.md"]
     assert load_pages(tmp_path / "missing") == []
 
