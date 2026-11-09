@@ -36,3 +36,4 @@ jobs:
           test -f "$RUNNER_TEMP/demo/public/index.html"
           test -f "$RUNNER_TEMP/demo/public/feed.xml"
           test -f "$RUNNER_TEMP/demo/public/posts/smoke-test/index.html"
+          pagewright check -s "$RUNNER_TEMP/demo"

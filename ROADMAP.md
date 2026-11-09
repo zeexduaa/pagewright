@@ -51,7 +51,8 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [ ] **`now` in fingerprints**: today, templates using `now` aren't re-rendered as time passes. Track which templates read `now` and rebuild them daily (or always). (M)
 - [ ] **Partial reloads**: only reload the page being viewed, or just swap CSS, when that's all that changed. (M)
 - [x] **Build profile**: `pagewright build --profile` shows the slowest templates and pages. (S)
-- [ ] **Link checker**: `pagewright check` finds broken internal links and missing images. (M)
+- [x] **Link checker**: `pagewright check` finds broken internal links and missing images. (M)
+- [ ] **External link checking**: `pagewright check --external` fetches outside links (with a cache, rate limits and a timeout) and reports dead ones. (M)
 
 ## v1.0: Release
 

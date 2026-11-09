@@ -4,6 +4,7 @@
     pagewright build                  build into public/ (incremental)
     pagewright serve                  dev server with live reload (includes drafts)
     pagewright post "My title"        start a new post (as a draft)
+    pagewright check                  build, then look for broken internal links
 """
 
 from __future__ import annotations
@@ -52,6 +53,22 @@ def cmd_build(args: argparse.Namespace) -> int:
             for name, seconds in slowest:
                 print(f"  {name:<{width}}  {seconds * 1000:7.1f} ms  {seconds / total:4.0%}")
     return 0
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    from .check import check_links
+
+    site = Site(args.site, drafts=args.drafts)
+    report = site.build()
+    problems = check_links(site.config.output_path, site.config.base_url)
+    pages = sum(1 for _ in site.config.output_path.rglob("*.html"))
+    if not problems:
+        print(f"No broken links in {pages} HTML file(s). ({report.summary()})")
+        return 0
+    print(f"{len(problems)} broken link(s) in {pages} HTML file(s):\n")
+    for problem in problems:
+        print(f"  {problem}")
+    return 1
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -109,6 +126,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--profile", type=int, nargs="?", const=10, default=0, metavar="N",
                    help="show the N slowest outputs and build steps (default 10)")
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("check", help="build, then report broken internal links and anchors", parents=[site])
+    p.add_argument("--drafts", action="store_true", help="include draft pages")
+    p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("serve", help="dev server with live reload", parents=[site])
     p.add_argument("--host", default="127.0.0.1")

@@ -27,6 +27,7 @@ First version. Everything is new:
 - Reference-style links and footnotes in Markdown.
 - Definition lists in Markdown.
 - `smart_punctuation` setting for curly quotes, dashes and ellipses.
+- `pagewright check`: broken internal links, images and anchors.
 
 ### Fixed before release
 

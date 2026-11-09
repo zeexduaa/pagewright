@@ -23,7 +23,8 @@ Mostly to show how the pieces fit together, in code small enough to read in an a
 | Content | [`content.py`](src/pagewright/content.py) | TOML front matter, URLs from file paths, dated file names, summaries |
 | Build | [`site.py`](src/pagewright/site.py) | Sections, tags, pagination, Atom feed, sitemap, search index, static files, **incremental builds**, plugins |
 | Dev server | [`server.py`](src/pagewright/server.py) | Polling watcher, rebuild on save, live reload over server-sent events, errors shown in the browser |
-| CLI | [`cli.py`](src/pagewright/cli.py) | `new`, `build`, `serve`, `post` |
+| Link checker | [`check.py`](src/pagewright/check.py) | Broken internal links, images and anchors in the built site |
+| CLI | [`cli.py`](src/pagewright/cli.py) | `new`, `build`, `serve`, `post`, `check` |
 
 ## Install
 
@@ -43,6 +44,7 @@ $ python -m pip install -e .
 | `pagewright build [-s SITE] [--drafts] [--clean] [--force] [--base-url URL] [--profile [N]]` | Builds into `public/`. Only outputs whose inputs changed are rendered again; `--force` renders everything, `--clean` empties the folder first, `--profile` lists the slowest outputs and steps. |
 | `pagewright serve [-s SITE] [--port 8000] [--host 127.0.0.1] [--no-drafts]` | Builds, serves and rebuilds on every save. Open pages reload themselves. Shows drafts unless `--no-drafts`. |
 | `pagewright post "Title" [-s SITE] [--section posts]` | Creates `content/posts/YYYY-MM-DD-title.md` as a draft. |
+| `pagewright check [-s SITE] [--drafts]` | Builds, then lists broken internal links, missing images and `#anchors` that don't exist. Exits with 1 if it finds any, so it can run in CI. External links aren't checked yet. |
 
 ## A site
 
