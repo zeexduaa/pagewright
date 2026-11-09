@@ -33,7 +33,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [x] **Related posts**: by shared tags, available as `page.related`. (S)
 - [ ] **Series**: `series = "Learning Rust"` with previous/next links and a series index. (M)
 - [x] **Previous/next post links**: `page.prev` and `page.next` within a section. (S)
-- [ ] **Per-section and per-tag feeds**: `/posts/feed.xml`, `/tags/python/feed.xml`. (S)
+- [x] **Per-section and per-tag feeds**: `/posts/feed.xml`, `/tags/python/feed.xml`. (S)
 - [x] **Aliases and redirects**: `aliases = ["/old/url/"]` generates redirect pages. (S)
 - [ ] **Multilingual sites**: `index.fr.md` files, a `[languages]` table, translated menus and `hreflang` links. (XL)
 

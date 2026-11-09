@@ -31,6 +31,7 @@ def test_starter_site_builds_every_kind_of_page(site_dir):
         "index.html", "about/index.html", "posts/index.html", "posts/hello-world/index.html",
         "posts/markdown-guide/index.html", "tags/index.html", "tags/meta/index.html", "tags/writing/index.html",
         "404.html", "feed.xml", "sitemap.xml", "search-index.json", "robots.txt",
+        "posts/feed.xml", "tags/meta/feed.xml", "tags/writing/feed.xml",
     }
     assert set(report.rendered) == expected
     assert (site_dir / "public" / "style.css").exists() and (site_dir / "public" / "search.js").exists()
@@ -125,8 +126,9 @@ def test_editing_a_post_body_rerenders_only_that_post(site_dir):
     post = site_dir / "content/posts/2026-01-20-markdown-guide.md"
     post.write_text(post.read_text().replace("## Quotes", "## Quotations"))
     report = build(site_dir)
-    # The post itself, plus the feed and search index, which include full text. No list pages.
-    assert sorted(report.rendered) == ["feed.xml", "posts/markdown-guide/index.html", "search-index.json"]
+    # The post itself, plus the feeds it's in and the search index, which include full text. No list pages.
+    assert sorted(report.rendered) == ["feed.xml", "posts/feed.xml", "posts/markdown-guide/index.html",
+                                       "search-index.json", "tags/meta/feed.xml", "tags/writing/feed.xml"]
     assert "Quotations" in read(site_dir, "posts/markdown-guide/index.html")
 
 
@@ -419,3 +421,20 @@ def test_alias_clashes_and_bad_aliases(site_dir):
     write(site_dir / "content/posts/y.md", '+++\naliases = ["/a"]\n+++\ny\n')
     with pytest.raises(BuildError, match="clashes with an alias of content/posts/x.md"):
         build(site_dir)
+
+
+def test_section_and_tag_feeds(site_dir):
+    write(site_dir / "content/notes/2026-02-01-n.md", '+++\ntitle = "Note"\ntags = ["writing"]\n+++\nn\n')
+    write(site_dir / "content/docs/setup.md", '+++\ntitle = "Setup"\n+++\nNo date, so no feed.\n')
+    build(site_dir)
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    posts = ET.fromstring(read(site_dir, "posts/feed.xml"))
+    assert [e.find("a:title", ns).text for e in posts.findall("a:entry", ns)] == ["A quick Markdown guide", "Hello, world"]
+    assert posts.find("a:link[@rel='self']", ns).get("href") == "https://example.com/posts/feed.xml"
+    writing = ET.fromstring(read(site_dir, "tags/writing/feed.xml"))
+    assert {e.find("a:title", ns).text for e in writing.findall("a:entry", ns)} == {"Note", "A quick Markdown guide"}
+    assert not (site_dir / "public/docs/feed.xml").exists()
+
+    assert 'href="/posts/feed.xml"' in read(site_dir, "posts/index.html")
+    assert 'href="/tags/writing/feed.xml"' in read(site_dir, "tags/writing/index.html")
+    assert "/feed.xml" in read(site_dir, "docs/index.html") and "docs/feed.xml" not in read(site_dir, "docs/index.html")

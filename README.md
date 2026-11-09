@@ -9,7 +9,7 @@ $ pagewright new my-site
 $ cd my-site
 $ pagewright serve
 Serving /home/me/my-site at http://127.0.0.1:8000  (Ctrl+C to stop)
-12:01:44 built: 4 page(s), 13 written, 0 unchanged, 2 static file(s) in 14 ms
+12:01:44 built: 4 page(s), 16 written, 0 unchanged, 2 static file(s) in 14 ms
 ```
 
 ## Why another one?
@@ -67,7 +67,8 @@ Every build writes:
 - the home page, paginated, listing posts (pages with a date inside a section);
 - a list page per section (`/posts/`, `/posts/page/2/`, …);
 - `/tags/` and a page per tag;
-- `feed.xml` (Atom), `sitemap.xml`, `robots.txt`, `search-index.json` and `404.html`.
+- `feed.xml` (Atom), plus `feed.xml` in each section and tag that has posts;
+- `sitemap.xml`, `robots.txt`, `search-index.json` and `404.html`.
 
 ### Settings
 
@@ -152,7 +153,7 @@ Hooks: `filters`, `template_globals`, `on_config`, `on_page_markdown`, `on_page_
 
 Each output (a page, a list page, the feed…) gets a SHA-256 fingerprint of everything that can change it: the source text, every template it uses (including the ones it extends and includes), the config, and a digest of the site's page list (titles, URLs, dates, tags, summaries). Fingerprints from the last build live in `.pagewright-cache.json`. If a fingerprint hasn't changed and the file is still there, it isn't rendered again.
 
-So editing the body of one post renders that post, the feed and the search index, and nothing else. Changing its title also renders the lists that show it.
+So editing the body of one post renders that post, the feeds it appears in and the search index, and nothing else. Changing its title also renders the lists that show it.
 
 Known gap: templates that use `now` aren't re-rendered just because time has passed. Use `--force` for that (see the roadmap).
 

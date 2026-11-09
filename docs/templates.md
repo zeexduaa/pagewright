@@ -90,7 +90,7 @@ Every template gets:
 | `toc` | its table of contents as a nested `<ul>` (safe; empty if fewer than two headings) |
 | `now` | the build time (a `datetime`) |
 
-List pages (home, sections, tags) also get `posts` (this page's items) and `paginator`, with `number`, `total_pages`, `has_prev`, `has_next`, `prev_url`, `next_url` and `url_for(n)`. Section pages get `section`; tag pages get `tag`.
+List pages (home, sections, tags) also get `posts` (this page's items) and `paginator`, with `number`, `total_pages`, `has_prev`, `has_next`, `prev_url`, `next_url` and `url_for(n)`. Section pages get `section`; tag pages get `tag`. Both get `feed` (`url`, `title`) when they have posts, for a `<link rel="alternate">`.
 
 ### `page`
 

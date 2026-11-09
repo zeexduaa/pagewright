@@ -22,6 +22,7 @@ First version. Everything is new:
 - Data files: `data/*.toml` and `data/*.json` in `site.data`.
 - `page.prev`, `page.next` and `page.related`, shown at the end of posts in the default theme.
 - `aliases` in front matter: redirect pages from old URLs.
+- A feed for each section and tag (`/posts/feed.xml`, `/tags/python/feed.xml`), linked from their pages.
 
 ### Fixed before release
 

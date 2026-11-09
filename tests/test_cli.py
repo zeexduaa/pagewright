@@ -22,7 +22,7 @@ def test_new_creates_a_site_that_builds(tmp_path, capsys):
     assert "public/" in (target / ".gitignore").read_text()
 
     code, out, _ = run(capsys, "build", "-s", str(target))
-    assert code == 0 and "13 written" in out
+    assert code == 0 and "16 written" in out
     assert (target / "public" / "index.html").is_file()
 
 

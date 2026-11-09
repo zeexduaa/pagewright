@@ -394,10 +394,12 @@ class Site:
                 path = paginator.url_for(paginator.number).strip("/") + "/index.html"
                 template = (index.template if index and index.template else None) or self._choose(
                     f"{name}/list.html", "list.html")
-                title = index.title if index else name.replace("-", " ").title()
-                out.append((path, template, {"page": index, "section": {"name": name, "title": title, "url": base},
-                                             "paginator": paginator, "posts": paginator.items},
-                            index.raw_text if index else ""))
+                title = self._section_title(name)
+                context = {"page": index, "section": {"name": name, "title": title, "url": base},
+                           "paginator": paginator, "posts": paginator.items}
+                if any(p.is_post for p in items):
+                    context["feed"] = {"url": f"{base}feed.xml", "title": f"{self.config.title}: {title}"}
+                out.append((path, template, context, index.raw_text if index else ""))
 
         tags = self.tags
         if tags:
@@ -406,9 +408,11 @@ class Site:
                 base = f"/tags/{slugify(tag)}/"
                 for paginator in paginate(items, per_page, base):
                     path = paginator.url_for(paginator.number).strip("/") + "/index.html"
-                    out.append((path, self._choose("tag.html", "list.html"),
-                                {"tag": {"name": tag, "url": base, "count": len(items)},
-                                 "paginator": paginator, "posts": paginator.items}, ""))
+                    context = {"tag": {"name": tag, "url": base, "count": len(items)},
+                               "paginator": paginator, "posts": paginator.items}
+                    if any(p.is_post for p in items):
+                        context["feed"] = {"url": f"{base}feed.xml", "title": f"{self.config.title}: #{tag}"}
+                    out.append((path, self._choose("tag.html", "list.html"), context, ""))
         try:
             out.append(("404.html", self._choose("404.html"), {}, ""))
         except BuildError:
@@ -479,7 +483,7 @@ class Site:
     # ---- Feeds, sitemap, search, static --------------------------------------------------
 
     def _extra_files(self, site: dict[str, Any]) -> dict[str, str]:
-        files = {"feed.xml": self._atom(), "sitemap.xml": self._sitemap(), "search-index.json": self._search_index()}
+        files = {**self._feeds(), "sitemap.xml": self._sitemap(), "search-index.json": self._search_index()}
         robots_template = None
         try:
             robots_template = self.env.find("robots.txt")
@@ -514,8 +518,29 @@ class Site:
                 )
         return files
 
-    def _atom(self) -> str:
-        posts = self.posts[: self.config.feed_limit]
+    def _section_title(self, name: str) -> str:
+        index = next((p for p in self.pages if p.is_section_index and p.section == name), None)
+        return index.title if index else name.replace("-", " ").title()
+
+    def _feeds(self) -> dict[str, str]:
+        """The site feed, plus one per section and per tag that has posts."""
+        feeds = {"feed.xml": self._atom(self.posts, self.config.title, "/", "/feed.xml")}
+        for name, pages in self.sections.items():
+            posts = [p for p in self.posts if p.section == name]
+            if posts:
+                base = f"/{slugify(name)}/"
+                feeds[f"{slugify(name)}/feed.xml"] = self._atom(posts, f"{self.config.title}: {self._section_title(name)}",
+                                                               base, f"{base}feed.xml")
+        for tag, pages in self.tags.items():
+            posts = [p for p in pages if p.is_post]
+            if posts:
+                base = f"/tags/{slugify(tag)}/"
+                feeds[f"tags/{slugify(tag)}/feed.xml"] = self._atom(posts, f"{self.config.title}: #{tag}", base,
+                                                                   f"{base}feed.xml")
+        return feeds
+
+    def _atom(self, posts: list[Page], title: str, home: str, self_path: str) -> str:
+        posts = posts[: self.config.feed_limit]
         cfg = self.config
 
         def stamp(d: date | None) -> str:
@@ -536,10 +561,10 @@ class Site:
         author = f"  <author><name>{xml_escape(cfg.author)}</name></author>\n" if cfg.author else ""
         return (
             '<?xml version="1.0" encoding="utf-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">\n'
-            f"  <title>{xml_escape(cfg.title)}</title>\n"
-            f"  <link href=\"{xml_escape(cfg.absolute_url('/'))}\"/>\n"
-            f"  <link rel=\"self\" href=\"{xml_escape(cfg.absolute_url('/feed.xml'))}\"/>\n"
-            f"  <id>{xml_escape(cfg.absolute_url('/'))}</id>\n  <updated>{stamp(updated)}</updated>\n{author}"
+            f"  <title>{xml_escape(title)}</title>\n"
+            f"  <link href=\"{xml_escape(cfg.absolute_url(home))}\"/>\n"
+            f"  <link rel=\"self\" href=\"{xml_escape(cfg.absolute_url(self_path))}\"/>\n"
+            f"  <id>{xml_escape(cfg.absolute_url(self_path))}</id>\n  <updated>{stamp(updated)}</updated>\n{author}"
             f"  <generator version=\"{__version__}\">pagewright</generator>\n"
             + "\n".join(entries) + ("\n" if entries else "") + "</feed>\n"
         )
