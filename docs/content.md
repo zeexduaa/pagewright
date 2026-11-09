@@ -29,6 +29,7 @@ TOML between `+++` lines at the top. Every field is optional:
 | `tags` | list of text | Duplicates removed, order kept. |
 | `slug` | text | Lowercase letters, digits and `-`. Replaces the last part of the URL. |
 | `url` | text | The full URL, starting with `/`. Ends in `/` or `.html`. |
+| `aliases` | list of text | Old URLs, e.g. `["/2019/old-name/"]`. Each gets a small page that redirects here (with a canonical link and `noindex`), left out of the sitemap. |
 | `template` | text | A template name, e.g. `"landing.html"`. |
 | `summary` | Markdown | Replaces the automatic summary. |
 | `description` | text | For meta tags and the feed. |

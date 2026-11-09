@@ -105,6 +105,7 @@ description = "For <meta name=description> and the feed."
 summary = "Overrides the automatic summary."
 slug = "hi"                # /posts/hi/
 url = "/custom/path/"      # overrides everything
+aliases = ["/2019/old/"]   # old URLs that redirect here
 template = "landing.html"
 weight = 10                # order in the menu (lower first)
 toc = true                 # show the table of contents

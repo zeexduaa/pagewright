@@ -21,6 +21,7 @@ First version. Everything is new:
 - `loop.previtem`, `loop.nextitem`, `loop.revindex0` and `loop.changed()`; `dictsort` and `items` filters.
 - Data files: `data/*.toml` and `data/*.json` in `site.data`.
 - `page.prev`, `page.next` and `page.related`, shown at the end of posts in the default theme.
+- `aliases` in front matter: redirect pages from old URLs.
 
 ### Fixed before release
 

@@ -36,7 +36,22 @@ FRONT_MATTER = re.compile(r"\A\+\+\+[ \t]*\n(.*?)\n\+\+\+[ \t]*(?:\n|\Z)", re.DO
 DATED_NAME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})-(.+)$")
 MORE = "<!--more-->"
 FRONT_MATTER_FIELDS = {"title", "date", "updated", "draft", "tags", "slug", "url", "template",
-                       "summary", "description", "weight", "toc", "extra"}
+                       "summary", "description", "weight", "toc", "extra", "aliases"}
+
+
+def output_path_for(url: str) -> str:
+    """Where a URL's HTML goes inside the output folder: "/posts/hi/" -> "posts/hi/index.html"."""
+    path = url.strip("/")
+    if path.endswith(".html"):
+        return path
+    return f"{path}/index.html" if path else "index.html"
+
+
+def _site_url(value: str, source: str, field_name: str) -> str:
+    url = value.strip()
+    if not url.startswith("/") or ".." in url.split("/") or "\\" in url or any(c in url for c in "?#\"<>"):
+        raise ContentError(source, f"'{field_name}' must start with / and stay inside the site, e.g. \"/old/post/\"")
+    return url if url.endswith(("/", ".html")) else url + "/"
 
 
 class ContentError(ValueError):
@@ -62,6 +77,7 @@ class Page:
     show_toc: bool = False
     is_section_index: bool = False
     extra: dict[str, Any] = field(default_factory=dict)
+    aliases: list[str] = field(default_factory=list)  # old URLs that redirect here
     raw_text: str = ""
     # Filled in by render_markdown():
     content: Markup = Markup("")
@@ -76,10 +92,7 @@ class Page:
     @property
     def output_path(self) -> str:
         """Where the HTML goes inside the output folder, e.g. "posts/hello/index.html"."""
-        path = self.url.strip("/")
-        if path.endswith(".html"):
-            return path
-        return f"{path}/index.html" if path else "index.html"
+        return output_path_for(self.url)
 
     @property
     def is_post(self) -> bool:
@@ -170,12 +183,13 @@ def parse_page(text: str, source: str) -> Page:
     if "extra" in meta and not isinstance(meta["extra"], dict):
         raise ContentError(source, "[extra] must be a table")
 
+    aliases = meta.get("aliases", [])
+    if not isinstance(aliases, list) or not all(isinstance(a, str) for a in aliases):
+        raise ContentError(source, "'aliases' must be a list of old URLs, e.g. aliases = [\"/2019/old-name/\"]")
+    aliases = list(dict.fromkeys(_site_url(a, source, "aliases") for a in aliases))
+
     if "url" in meta:
-        url = meta["url"].strip()
-        if not url.startswith("/") or ".." in url.split("/"):
-            raise ContentError(source, "'url' must start with / and stay inside the site")
-        if not url.endswith(("/", ".html")):
-            url += "/"
+        url = _site_url(meta["url"], source, "url")
     else:
         slug = meta.get("slug") or (stem if not is_index else "")
         if slug and slugify(slug) != slug:
@@ -195,7 +209,7 @@ def parse_page(text: str, source: str) -> Page:
         date=page_date, updated=updated, draft=meta.get("draft", False), tags=tags,
         template=meta.get("template"), description=meta.get("description", ""),
         weight=meta.get("weight", 0), show_toc=meta.get("toc", False),
-        is_section_index=is_index and bool(folders), extra=meta.get("extra", {}), raw_text=text,
+        is_section_index=is_index and bool(folders), extra=meta.get("extra", {}), aliases=aliases, raw_text=text,
     )
     if meta.get("summary"):
         page.summary = Markup(Markdown().convert(meta["summary"]).html)

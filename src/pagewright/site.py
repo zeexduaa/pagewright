@@ -34,7 +34,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 from . import __version__
 from .config import Config, load_config
-from .content import ContentError, Page, load_pages
+from .content import ContentError, Page, load_pages, output_path_for
 from .markdown import Markdown, slugify
 from .templates import Environment, Markup, TemplateError, TemplateNotFound
 
@@ -487,6 +487,31 @@ class Site:
             pass
         files["robots.txt"] = (self.env.render("robots.txt", {"site": site}) if robots_template else
                                f"User-agent: *\nAllow: /\n\nSitemap: {self.config.absolute_url('/sitemap.xml')}\n")
+        files.update(self._redirects(set(files)))
+        return files
+
+    def _redirects(self, taken_extra: set[str]) -> dict[str, str]:
+        """A small HTML page at each alias that sends visitors (and search engines) to the page's URL."""
+        taken = {output[0]: f"the page {output[0]}" for output in self.outputs()}
+        taken.update({path: path for path in taken_extra})
+        files: dict[str, str] = {}
+        for page in self.pages:
+            for alias in page.aliases:
+                path = output_path_for(alias)
+                if alias == page.url:
+                    continue
+                if path in taken:
+                    raise BuildError(f"content/{page.source}: alias {alias} clashes with {taken[path]}")
+                taken[path] = f"an alias of content/{page.source}"
+                target = xml_escape(self.config.absolute_url(page.url), {'"': "&quot;"})
+                files[path] = (
+                    f'<!doctype html>\n<html lang="{xml_escape(self.config.language)}">\n<head>\n'
+                    f'<meta charset="utf-8">\n<title>Moved: {xml_escape(page.title)}</title>\n'
+                    f'<link rel="canonical" href="{target}">\n'
+                    f'<meta name="robots" content="noindex">\n'
+                    f'<meta http-equiv="refresh" content="0; url={target}">\n</head>\n'
+                    f'<body><p>This page has moved to <a href="{target}">{target}</a>.</p></body>\n</html>\n'
+                )
         return files
 
     def _atom(self) -> str:

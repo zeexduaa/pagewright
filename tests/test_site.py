@@ -389,3 +389,33 @@ def test_related_ranks_by_shared_tags(site_dir):
     site.load()
     a = next(p for p in site.posts if p.title == "a")
     assert [p.title for p in a.related] == ["c", "b"]
+
+
+def test_aliases_write_redirect_pages(site_dir):
+    write(site_dir / "content/posts/2026-03-01-new-name.md",
+          '+++\ntitle = "New & improved"\naliases = ["/2019/old-name/", "/old.html", "/posts/older"]\n+++\nHi.\n')
+    build(site_dir)
+    page = read(site_dir, "2019/old-name/index.html")
+    assert 'http-equiv="refresh" content="0; url=https://example.com/posts/new-name/"' in page
+    assert 'rel="canonical"' in page and "noindex" in page and "New &amp; improved" in page
+    assert (site_dir / "public/old.html").is_file()
+    assert (site_dir / "public/posts/older/index.html").is_file()
+    assert "old-name" not in read(site_dir, "sitemap.xml")
+
+    # Removing an alias removes its redirect page on the next build.
+    write(site_dir / "content/posts/2026-03-01-new-name.md", '+++\ntitle = "New"\n+++\nHi.\n')
+    report = build(site_dir)
+    assert "2019/old-name/index.html" in report.removed and not (site_dir / "public/2019").exists()
+
+
+def test_alias_clashes_and_bad_aliases(site_dir):
+    write(site_dir / "content/posts/x.md", '+++\naliases = ["/about/"]\n+++\nx\n')
+    with pytest.raises(BuildError, match=r"alias /about/ clashes with the page about/index.html"):
+        build(site_dir)
+    write(site_dir / "content/posts/x.md", '+++\naliases = ["old/"]\n+++\nx\n')
+    with pytest.raises(BuildError, match="must start with / and stay inside the site"):
+        build(site_dir)
+    write(site_dir / "content/posts/x.md", '+++\naliases = ["/a/"]\n+++\nx\n')
+    write(site_dir / "content/posts/y.md", '+++\naliases = ["/a"]\n+++\ny\n')
+    with pytest.raises(BuildError, match="clashes with an alias of content/posts/x.md"):
+        build(site_dir)
