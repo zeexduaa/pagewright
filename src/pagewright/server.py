@@ -211,8 +211,12 @@ class DevServer:
         self.state.bump(None)
         return report
 
-    def watch(self) -> None:
-        stamps = watched_files(self.root, self.site)
+    def watch(self, stamps: dict[Path, int] | None = None) -> None:
+        """Rebuilds whenever a watched file changes. ``stamps`` is the snapshot to compare against;
+        take it *before* building, so a file saved during the build or before this thread gets
+        going is still noticed."""
+        if stamps is None:
+            stamps = watched_files(self.root, self.site)
         while not self._stop.wait(self.interval):
             current = watched_files(self.root, self.site)
             if current != stamps:
@@ -221,14 +225,15 @@ class DevServer:
                 more = f" and {len(changed) - 3} more" if len(changed) > 3 else ""
                 self.log(f"changed: {names}{more}")
                 time.sleep(0.05)  # let editors finish writing
+                stamps = watched_files(self.root, self.site)  # before building, for the same reason
                 self.build()
-                stamps = watched_files(self.root, self.site)
 
     def start(self) -> None:
         """Builds once, then serves and watches in background threads."""
+        stamps = watched_files(self.root, None)
         self.build()
         threading.Thread(target=self.httpd.serve_forever, kwargs={"poll_interval": 0.1}, daemon=True).start()
-        threading.Thread(target=self.watch, daemon=True).start()
+        threading.Thread(target=self.watch, args=(stamps,), daemon=True).start()
 
     def stop(self) -> None:
         self._stop.set()

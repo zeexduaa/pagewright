@@ -135,3 +135,26 @@ def test_watched_files_skip_hidden_and_pycache(site_dir):
     names = {p.name for p in watched_files(site_dir, None)}
     assert "pagewright.toml" in names and "about.md" in names
     assert ".draft.swp" not in names and "x.pyc" not in names
+
+
+def test_change_right_after_start_is_not_missed(site_dir):
+    """Regression: the watcher used to take its first snapshot when its thread started, so a save
+    between start() and that moment was treated as the starting state and never rebuilt."""
+    srv = DevServer(site_dir, port=0, interval=0.05, log=lambda line: None)
+    real_watch = srv.watch
+    gate = threading.Event()
+
+    def slow_watch(*args):
+        gate.wait(5)  # the watcher thread starts late, as on a busy machine
+        real_watch(*args)
+
+    srv.watch = slow_watch
+    srv.start()
+    try:
+        about = site_dir / "content" / "about.md"
+        about.write_text(about.read_text(encoding="utf-8") + "\nSaved straight away.\n", encoding="utf-8")
+        bump(about)
+        gate.set()
+        assert wait_until(lambda: "Saved straight away" in get(srv, "/about/")[2])
+    finally:
+        srv.stop()
