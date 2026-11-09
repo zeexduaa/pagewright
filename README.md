@@ -57,6 +57,7 @@ my-site/
 ├── templates/             your templates; override the theme's by name
 ├── static/                copied as-is (overrides theme static files)
 ├── themes/default/        templates/ + static/
+├── data/                  TOML/JSON for templates: site.data.<name>
 └── plugins/               Python files, enabled in pagewright.toml
 ```
 

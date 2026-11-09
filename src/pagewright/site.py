@@ -23,6 +23,7 @@ import hashlib
 import json
 import shutil
 import time
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -112,6 +113,46 @@ def _digest(*parts: Any) -> str:
     return h.hexdigest()[:24]
 
 
+DATA_DIR = "data"
+
+
+def _stable(value: Any) -> str:
+    """A repeatable text form of site.data for fingerprints, even if a plugin put odd things in it."""
+    try:
+        return json.dumps(value, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return repr(value)
+
+
+def load_data(folder: Path) -> dict[str, Any]:
+    """data/authors.toml -> site.data.authors; data/menus/main.json -> site.data.menus.main."""
+    data: dict[str, Any] = {}
+    if not folder.is_dir():
+        return data
+    for path in sorted(folder.rglob("*")):
+        rel = path.relative_to(folder)
+        if not path.is_file() or any(part.startswith((".", "_")) for part in rel.parts):
+            continue
+        if path.suffix not in (".toml", ".json"):
+            continue
+        where = f"{DATA_DIR}/{rel.as_posix()}"
+        try:
+            text = path.read_text(encoding="utf-8")
+            value = tomllib.loads(text) if path.suffix == ".toml" else json.loads(text)
+        except (tomllib.TOMLDecodeError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise BuildError(f"{where}: can't be read: {exc}") from None
+        target = data
+        for part in rel.parent.parts:
+            existing = target.setdefault(part, {})
+            if not isinstance(existing, dict):
+                raise BuildError(f"{where}: the folder {part!r} has the same name as a data file")
+            target = existing
+        if rel.stem in target:
+            raise BuildError(f"{where}: site.data already has {rel.stem!r} (from another file or folder of that name)")
+        target[rel.stem] = value
+    return data
+
+
 class Site:
     def __init__(self, root: str | Path, drafts: bool = False, base_url: str | None = None):
         self.config: Config = load_config(root)
@@ -189,6 +230,7 @@ class Site:
 
     def load(self) -> BuildReport:
         report = BuildReport()
+        self.data.update(load_data(self.root / DATA_DIR))  # keeps anything a plugin set in on_config
         try:
             pages = load_pages(self.config.content_path)
         except ContentError as exc:
@@ -285,6 +327,7 @@ class Site:
              for p in self.pages],
             [getattr(plugin, "__file__", "") and Path(plugin.__file__ or "").read_text(encoding="utf-8")
              for plugin in self.plugins],
+            _stable(self.data),  # data files, plus whatever plugins added in on_site
         )
 
     # ---- Rendering -----------------------------------------------------------------------

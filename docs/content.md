@@ -69,6 +69,10 @@ A post's summary, shown on list pages and in the feed, is:
 2. otherwise everything before `<!--more-->`;
 3. otherwise the first paragraph.
 
+## Data files
+
+TOML and JSON files in `data/` are loaded into `site.data` for templates, by file name. Subfolders nest, so `data/links/social.json` becomes `site.data.links.social`. Files starting with `.` or `_` are skipped. Data is part of every page's fingerprint, so editing a data file re-renders the pages.
+
 ## Static files
 
 Everything in the theme's `static/` and then your `static/` is copied into the output as-is, so your files win. A static file that would overwrite a generated page (e.g. `static/about/index.html` next to `content/about.md`) is an error.

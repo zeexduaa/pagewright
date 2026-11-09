@@ -84,7 +84,7 @@ Every template gets:
 | `site.sections` | `{name, title, url, pages}` for each content folder |
 | `site.tags` | `{name, url, count, pages}`, A–Z |
 | `site.menu` | top-level pages except `/`, by `weight` then title; hide one with `extra.menu = false` |
-| `site.data` | whatever plugins put there |
+| `site.data` | files from `data/` (`data/authors.toml` → `site.data.authors`, `data/links/social.json` → `site.data.links.social`), plus whatever plugins add |
 | `page` | the page being rendered (or a section's `index.md`), see below |
 | `content` | the page's HTML (safe) |
 | `toc` | its table of contents as a nested `<ul>` (safe; empty if fewer than two headings) |

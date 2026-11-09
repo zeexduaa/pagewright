@@ -19,8 +19,11 @@ First version. Everything is new:
 - Task lists in Markdown: `- [ ]` and `- [x]`.
 - `{% raw %}…{% endraw %}` in templates.
 - `loop.previtem`, `loop.nextitem`, `loop.revindex0` and `loop.changed()`; `dictsort` and `items` filters.
+- Data files: `data/*.toml` and `data/*.json` in `site.data`.
 
 ### Fixed before release
+
+- Values plugins put in `site.data` (such as the starter's word count) weren't part of the cache fingerprint, so pages showing them could go stale.
 
 - Headings like "Same", "Same", "Same-1" got two `same-1` ids; ids are now always unique.
 - Unknown entities such as `&bogus;` were passed through; they are now escaped.

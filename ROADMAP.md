@@ -13,7 +13,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [ ] **Smart punctuation**: optional curly quotes, en/em dashes and ellipses, never inside code. (S)
 - [ ] **YAML front matter**: `---` blocks with a small, safe YAML subset (scalars, lists, one level of maps), since PyYAML is a dependency we don't want. (L)
 - [ ] **Datetimes with time zones**: keep the time from `date = 2026-11-09T14:30:00+01:00`, add a `timezone` setting, and use full timestamps in the feed and sorting. (M)
-- [ ] **Data files**: load `data/*.toml` and `data/*.json` into `site.data` (the dev server already watches `data/`). (S)
+- [x] **Data files**: load `data/*.toml` and `data/*.json` into `site.data` (the dev server already watches `data/`). (S)
 - [ ] **Page bundles**: `content/posts/trip/index.md` plus images in the same folder, copied next to the page. (M)
 
 ## v0.3: Templates and themes

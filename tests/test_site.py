@@ -319,3 +319,44 @@ def test_different_tags_with_the_same_url_are_an_error(site_dir):
     write(site_dir / "content/posts/cpp.md", '+++\ntitle = "C++"\ndate = 2026-03-02\ntags = ["C++"]\n+++\ncpp\n')
     with pytest.raises(BuildError, match=r"would both be /tags/c/"):
         build(site_dir)
+
+
+def test_data_files_are_available_to_templates(site_dir):
+    write(site_dir / "data/authors.toml", '[ana]\nname = "Ana"\n')
+    write(site_dir / "data/links/social.json", '[{"name": "GitHub", "url": "https://github.com"}]')
+    write(site_dir / "data/_notes.toml", "ignored = true")
+    write(site_dir / "templates/partials/footer.html",
+          "<footer>{{ site.data.authors.ana.name }} {% for l in site.data.links.social %}{{ l.name }}{% endfor %}"
+          "</footer>")
+    build(site_dir)
+    assert "<footer>Ana GitHub</footer>" in read(site_dir, "about/index.html")
+    site = Site(site_dir)
+    site.load()
+    assert set(site.data) == {"authors", "links"}  # _notes.toml is skipped
+
+    write(site_dir / "data/authors.toml", '[ana]\nname = "Ana María"\n')
+    report = build(site_dir)
+    assert "about/index.html" in report.rendered  # data is part of every fingerprint
+    assert "Ana María" in read(site_dir, "about/index.html")
+
+
+def test_bad_or_clashing_data_files_are_errors(site_dir):
+    write(site_dir / "data/a.toml", "x = ")
+    with pytest.raises(BuildError, match="data/a.toml: can't be read"):
+        build(site_dir)
+    write(site_dir / "data/a.toml", "x = 1")
+    write(site_dir / "data/a.json", "{}")
+    with pytest.raises(BuildError, match="already has 'a'"):
+        build(site_dir)
+
+
+def test_plugin_data_changes_rerender_pages_that_show_it(site_dir):
+    toml = site_dir / "pagewright.toml"
+    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["word_count"]'))
+    write(site_dir / "templates/partials/footer.html", "<footer>{{ site.data.total_words }}</footer>")
+    build(site_dir)
+    before = read(site_dir, "about/index.html")
+    post = site_dir / "content/posts/2026-01-15-hello-world.md"
+    post.write_text(post.read_text() + "\nThree more words.\n")
+    build(site_dir)
+    assert read(site_dir, "about/index.html") != before
