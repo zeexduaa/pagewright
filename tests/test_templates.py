@@ -319,3 +319,20 @@ def test_errors_in_a_block_name_the_child_template(tmp_path):
     with pytest.raises(TemplateError) as exc:
         env.render("page.html")
     assert exc.value.name == "page.html" and exc.value.line == 4
+
+
+def test_raw_blocks_keep_template_syntax(env):
+    assert r(env, "{% raw %}{{ page.title }} {% if x %}{# c #}{% endraw %}!") == "{{ page.title }} {% if x %}{# c #}!"
+    assert r(env, "a {%- raw -%}  {{ x }}  {%- endraw -%} b") == "a{{ x }}b"
+    assert r(env, "{{ 1 }}\n{% raw %}\n{{ 2 }}\n{% endraw %}\n{{ undefined_thing.x }}{{ 3 }}") == "1\n\n{{ 2 }}\n\n3"
+    with pytest.raises(TemplateError, match="never closed") as exc:
+        r(env, "\n{% raw %}{{ x }}")
+    assert exc.value.line == 2
+    with pytest.raises(TemplateError, match="nothing open"):
+        r(env, "{% endraw %}")
+
+
+def test_line_numbers_after_a_raw_block(env):
+    with pytest.raises(TemplateError) as exc:
+        r(env, "{% raw %}\n\n{% endraw %}\n{{ 1 / 0 }}")
+    assert exc.value.line == 4

@@ -21,7 +21,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [ ] **Shortcodes**: `{{< youtube id="…" >}}` in Markdown rendered with `templates/shortcodes/youtube.html`, without breaking code blocks. (L)
 - [ ] **Syntax highlighting**: a small tokenizer for Python, JavaScript, HTML/CSS, shell, TOML and JSON, emitting classes the default theme styles. (L)
 - [ ] **Macros**: `{% macro card(post) %}…{% endmacro %}` and `{% import "macros.html" as m %}`. (M)
-- [ ] **`{% raw %}` blocks** for showing template syntax on a page. (S)
+- [x] **`{% raw %}` blocks** for showing template syntax on a page. (S)
 - [ ] **Template allow-list for calls**: only allow calling known-safe methods (str methods, `loop.cycle`, `paginator.url_for`, plugin globals) instead of any public method. (M)
 - [ ] **Better template errors**: show the offending line with a caret, and the include/extends chain that led to it. (M)
 - [ ] **`loop.previtem` / `loop.nextitem`, `dictsort` and `items` filters**: common Jinja features theme authors expect. (S)

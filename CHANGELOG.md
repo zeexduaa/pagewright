@@ -17,6 +17,7 @@ First version. Everything is new:
 ### Added since
 
 - Task lists in Markdown: `- [ ]` and `- [x]`.
+- `{% raw %}…{% endraw %}` in templates.
 
 ### Fixed before release
 

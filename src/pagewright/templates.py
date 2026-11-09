@@ -95,6 +95,7 @@ class TemplateNotFound(TemplateError):
 
 # Comments are matched first so a "}}" inside {# ... #} doesn't end them early.
 TAG = re.compile(r"(\{#)(.*?)(#\})|(\{\{-?|\{%-?)(.*?)(-?\}\}|-?%\})", re.DOTALL)
+RAW_END = re.compile(r"\{%-?\s*endraw\s*-?%\}")
 
 
 @dataclass
@@ -109,7 +110,7 @@ def tokenize(source: str, name: str) -> list[Token]:
     pos = 0
     line = 1
     trim_next = False
-    for m in TAG.finditer(source):
+    while (m := TAG.search(source, pos)) is not None:
         text = source[pos:m.start()]
         if trim_next:
             text = text.lstrip()
@@ -126,6 +127,24 @@ def tokenize(source: str, name: str) -> list[Token]:
             expected = "}}" if opener.startswith("{{") else "%}"
             if not closer.endswith(expected):
                 raise TemplateError(f"expected {expected!r} to close {opener!r}", name, line)
+            if opener.startswith("{%") and body.strip() == "raw":
+                # Everything up to {% endraw %} is text, tags included.
+                end = RAW_END.search(source, m.end())
+                if end is None:
+                    raise TemplateError("{% raw %} is never closed with {% endraw %}", name, line)
+                raw = source[m.end():end.start()]
+                if closer.startswith("-"):
+                    raw = raw.lstrip()
+                if end.group(0).startswith("{%-"):
+                    raw = raw.rstrip()
+                if raw:
+                    tokens.append(Token("text", raw, line))
+                line += source[m.start():end.end()].count("\n")
+                trim_next = end.group(0).endswith("-%}")
+                pos = end.end()
+                continue
+            if opener.startswith("{%") and body.strip() == "endraw":
+                raise TemplateError("unexpected {% endraw %} (nothing open to close)", name, line)
             tokens.append(Token("var" if opener.startswith("{{") else "block", body.strip(), line))
         trim_next = closer.startswith("-")
         line += m.group(0).count("\n")

@@ -63,6 +63,8 @@ So you can override one template of a theme without copying the rest.
 {% block content %}{{ super() }} and more{% endblock %}
 
 {% include "partials/footer.html" %}
+
+{% raw %}{{ shown as-is }}{% endraw %}     {# for writing about templates #}
 ```
 
 `{% extends %}` must come first. Anything outside blocks in a child template is ignored. Blocks can nest. `super()` renders the parent's version of the block.
