@@ -438,3 +438,14 @@ def test_section_and_tag_feeds(site_dir):
     assert 'href="/posts/feed.xml"' in read(site_dir, "posts/index.html")
     assert 'href="/tags/writing/feed.xml"' in read(site_dir, "tags/writing/index.html")
     assert "/feed.xml" in read(site_dir, "docs/index.html") and "docs/feed.xml" not in read(site_dir, "docs/index.html")
+
+
+def test_smart_punctuation_setting(site_dir):
+    toml = site_dir / "pagewright.toml"
+    toml.write_text(toml.read_text(encoding="utf-8").replace("allow_html = true", "allow_html = true\nsmart_punctuation = true"),
+                    encoding="utf-8")
+    write(site_dir / "content/quotes.md", '+++\ntitle = "Quotes"\n+++\nIt\'s "here" -- now.\n')
+    build(site_dir)
+    assert "It’s “here” – now." in read(site_dir, "quotes/index.html")
+    with pytest.raises(ConfigError, match="smart_punctuation must be true or false"):
+        parse_config("[markdown]\nsmart_punctuation = 1", site_dir)

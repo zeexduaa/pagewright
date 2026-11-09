@@ -167,7 +167,8 @@ class Site:
         self.plugins: list[ModuleType] = []
         self.pages: list[Page] = []
         self.data: dict[str, Any] = {}  # free space for plugins to share with templates
-        self.markdown = Markdown(allow_html=self.config.allow_html)
+        self.markdown = Markdown(allow_html=self.config.allow_html,
+                                 smart_punctuation=self.config.smart_punctuation)
         self.env = Environment(self._template_dirs())
         self.env.globals.update(absolute_url=self.config.absolute_url, now=datetime.now(timezone.utc),
                                 pagewright_version=__version__)

@@ -109,3 +109,9 @@ def test_footnote_markers_are_left_out_of_summaries():
     page = parse_page("Intro[^1].\n\n<!--more-->\n\nRest.\n\n[^1]: Note.\n", "posts/b.md")
     page.render_markdown(Markdown())
     assert "[^1]" not in page.summary and "Intro." in page.summary
+
+
+def test_front_matter_summary_uses_the_sites_markdown_settings():
+    page = parse_page('+++\nsummary = "Hi <b>there</b> -- you"\n+++\nBody', "posts/s.md")
+    page.render_markdown(Markdown(allow_html=False, smart_punctuation=True))
+    assert page.summary == "<p>Hi &lt;b&gt;there&lt;/b&gt; – you</p>"

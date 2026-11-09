@@ -85,6 +85,7 @@ class Page:
     summary: Markup = Markup("")
     headings: list[Heading] = field(default_factory=list)
     toc: Markup = Markup("")
+    summary_source: str = ""         # `summary` from the front matter, as Markdown
     # Filled in by Site.load() for posts:
     prev: Page | None = field(default=None, repr=False, compare=False)     # the older post in this section
     next: Page | None = field(default=None, repr=False, compare=False)     # the newer one
@@ -108,7 +109,9 @@ class Page:
         self.content = Markup(document.html)
         self.headings = document.headings
         self.toc = Markup(document.toc_html())
-        if not self.summary:
+        if self.summary_source:
+            self.summary = Markup(markdown.convert(self.summary_source).html)
+        elif not self.summary:
             # Footnote markers are left out of summaries: their notes aren't on list pages or in feeds.
             if MORE in self.body:
                 before = FOOTNOTE_REF.sub("", self.body.split(MORE, 1)[0])
@@ -214,8 +217,7 @@ def parse_page(text: str, source: str) -> Page:
         weight=meta.get("weight", 0), show_toc=meta.get("toc", False),
         is_section_index=is_index and bool(folders), extra=meta.get("extra", {}), aliases=aliases, raw_text=text,
     )
-    if meta.get("summary"):
-        page.summary = Markup(Markdown().convert(meta["summary"]).html)
+    page.summary_source = meta.get("summary", "")
     return page
 
 

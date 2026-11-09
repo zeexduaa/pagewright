@@ -63,7 +63,9 @@ Supported:
 
 `javascript:`, `vbscript:` and `data:` URLs in links and images are replaced with `#`. Put images in `static/` instead.
 
-Not yet supported (see the roadmap): syntax highlighting and smart quotes.
+With `smart_punctuation = true` under `[markdown]` in `pagewright.toml`, straight quotes become curly (“ ” ‘ ’, and apostrophes like it’s and the ’90s), `--` becomes –, `---` becomes — and `...` becomes …, everywhere except code and HTML tags.
+
+Not yet supported (see the roadmap): syntax highlighting.
 
 ## Summaries
 

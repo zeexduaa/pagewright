@@ -98,6 +98,19 @@ REF_DEF = re.compile(r"^ {0,3}\[(?!\^)([^\[\]]{1,999})\]:[ \t]*(<[^<>\n]*>|\S+)"
 NOTE_DEF = re.compile(r"^ {0,3}\[\^([\w-]{1,64})\]:[ \t]?(.*)$")
 
 
+def smarten(text: str) -> str:
+    """Typographic punctuation for already-escaped text (code and HTML are placeholders by now):
+    "quotes" -> “quotes”, it's -> it’s, -- -> –, --- -> —, ... -> …"""
+    text = text.replace("---", "\u2014").replace("--", "\u2013").replace("...", "\u2026")
+    opener = r"(^|[\s(\[{\u2014\u2013\x00>*_~])"  # start, space, bracket, dash, emphasis mark, placeholder
+    text = re.sub(r"'(?=\d\d(?:s\b|\b))", "\u2019", text)  # the '90s: an apostrophe, not an opening quote
+    text = re.sub(opener + r"&quot;(?=\S)", "\\1\u201c", text)
+    text = text.replace("&quot;", "\u201d")
+    text = re.sub(opener + r"'(?=\S)", "\\1\u2018", text)
+    text = re.sub(r"(?<=[^\W_])\u2018", "\u2019", text)  # only an apostrophe can follow a letter or digit
+    return text.replace("'", "\u2019")
+
+
 def normalize_label(label: str) -> str:
     """Reference labels match case-insensitively, with runs of whitespace treated as one space."""
     return " ".join(label.split()).casefold()
@@ -142,8 +155,9 @@ class InlineParser:
     PLACEHOLDER = "\x00{}\x00"
 
     def __init__(self, allow_html: bool = True, refs: dict[str, tuple[str, str | None]] | None = None,
-                 footnote: Callable[[str], str | None] | None = None):
+                 footnote: Callable[[str], str | None] | None = None, smart: bool = False):
         self.allow_html = allow_html
+        self.smart = smart
         self.refs = refs or {}          # normalized label -> (url, title)
         self.footnote = footnote        # "[^id]" -> HTML for the reference, or None if undefined
 
@@ -151,6 +165,8 @@ class InlineParser:
         self._stash: list[str] = []
         protected = self._protect(text)
         escaped = escape(protected).replace("&#x27;", "'")
+        if self.smart:
+            escaped = smarten(escaped)
         formatted = self._emphasis(escaped)
         formatted = self._line_breaks(formatted)
         return self._restore(formatted)
@@ -304,7 +320,7 @@ class InlineParser:
         if image:
             alt = re.sub(r"[*_`\[\]]", "", label)
             return end, f'<img src="{href}" alt="{escape(alt)}"{title_attr} />'
-        inner = InlineParser(self.allow_html, self.refs, self.footnote).render(label)
+        inner = InlineParser(self.allow_html, self.refs, self.footnote, self.smart).render(label)
         return end, f'<a href="{href}"{title_attr}>{inner}</a>'
 
     @staticmethod
@@ -370,9 +386,10 @@ HTML_BLOCK = re.compile(rf"^ {{0,3}}<(?:/?(?:{HTML_BLOCK_TAGS})(?:[\s/>]|$))", r
 class Markdown:
     """Reusable converter. ``Markdown().convert(text)`` returns a :class:`Document`."""
 
-    def __init__(self, allow_html: bool = True, heading_ids: bool = True):
+    def __init__(self, allow_html: bool = True, heading_ids: bool = True, smart_punctuation: bool = False):
         self.allow_html = allow_html
         self.heading_ids = heading_ids
+        self.smart_punctuation = smart_punctuation
 
     def convert(self, text: str) -> Document:
         self._headings: list[Heading] = []
@@ -382,7 +399,8 @@ class Markdown:
         self._notes = notes                    # footnote id -> its Markdown lines
         self._note_order: list[str] = []       # ids in the order they're first referenced
         self._note_uses: dict[str, int] = {}
-        self._inline = InlineParser(self.allow_html, refs, self._footnote_ref if notes else None)
+        self._inline = InlineParser(self.allow_html, refs, self._footnote_ref if notes else None,
+                                    self.smart_punctuation)
         body = self._blocks(lines)
         if self._note_order:
             body += "\n" + self._footnote_section()
@@ -796,6 +814,6 @@ class Markdown:
         return i
 
 
-def render(text: str, allow_html: bool = True) -> str:
+def render(text: str, allow_html: bool = True, smart_punctuation: bool = False) -> str:
     """Shortcut: Markdown text to an HTML string."""
-    return Markdown(allow_html=allow_html).convert(text).html
+    return Markdown(allow_html=allow_html, smart_punctuation=smart_punctuation).convert(text).html

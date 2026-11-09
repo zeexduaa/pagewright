@@ -10,7 +10,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [x] **Footnotes**: `[^1]` references and `[^1]: …` definitions, rendered as a numbered list with back-links at the end of the page. (M)
 - [x] **Task lists**: `- [ ]` and `- [x]` as disabled checkboxes, GFM-style. (S)
 - [x] **Definition lists**: `Term` followed by `: definition` lines, rendered as `<dl>`. (S)
-- [ ] **Smart punctuation**: optional curly quotes, en/em dashes and ellipses, never inside code. (S)
+- [x] **Smart punctuation**: optional curly quotes, en/em dashes and ellipses, never inside code. (S)
 - [ ] **YAML front matter**: `---` blocks with a small, safe YAML subset (scalars, lists, one level of maps), since PyYAML is a dependency we don't want. (L)
 - [ ] **Datetimes with time zones**: keep the time from `date = 2026-11-09T14:30:00+01:00`, add a `timezone` setting, and use full timestamps in the feed and sorting. (M)
 - [x] **Data files**: load `data/*.toml` and `data/*.json` into `site.data` (the dev server already watches `data/`). (S)

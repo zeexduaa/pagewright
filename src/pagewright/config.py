@@ -30,6 +30,7 @@ class Config:
     posts_per_page: int = 10
     feed_limit: int = 20
     allow_html: bool = True
+    smart_punctuation: bool = False
     plugins: list[str] = field(default_factory=list)
     extra: dict[str, Any] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict)
@@ -85,12 +86,14 @@ def parse_config(text: str, root: Path, where: str = CONFIG_FILE) -> Config:
             setattr(config, name, value)
 
     markdown = data.get("markdown", {})
-    if not isinstance(markdown, dict) or set(markdown) - {"allow_html"}:
-        raise ConfigError(f"{where}: [markdown] only supports allow_html")
-    if "allow_html" in markdown:
-        if not isinstance(markdown["allow_html"], bool):
-            raise ConfigError(f"{where}: markdown.allow_html must be true or false")
-        config.allow_html = markdown["allow_html"]
+    options = ("allow_html", "smart_punctuation")
+    if not isinstance(markdown, dict) or set(markdown) - set(options):
+        raise ConfigError(f"{where}: [markdown] supports {' and '.join(options)}")
+    for name in options:
+        if name in markdown:
+            if not isinstance(markdown[name], bool):
+                raise ConfigError(f"{where}: markdown.{name} must be true or false")
+            setattr(config, name, markdown[name])
 
     plugins = data.get("plugins", [])
     if not isinstance(plugins, list) or not all(isinstance(p, str) and p.isidentifier() for p in plugins):

@@ -86,6 +86,7 @@ plugins = ["word_count"]   # files in plugins/
 
 [markdown]
 allow_html = true          # false escapes raw HTML in Markdown
+smart_punctuation = false  # true: “curly quotes”, it’s, – and —, …
 
 [extra]
 github = "zeexduaa"        # anything; templates see site.extra.github

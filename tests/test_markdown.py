@@ -320,3 +320,19 @@ def test_colons_that_are_not_definitions():
     assert render("ratio 1:2\nnext") == "<p>ratio 1:2\nnext</p>"
     assert render("# Title\n: no") == '<h1 id="title">Title</h1>\n<p>: no</p>'
     assert render(":no space") == "<p>:no space</p>"
+
+
+def test_smart_punctuation_is_opt_in():
+    text = "\"Hello,\" she said -- it's 5 o'clock... 'quoted' --- done, in the '90s."
+    assert render(text) == "<p>&quot;Hello,&quot; she said -- it's 5 o'clock... 'quoted' --- done, in the '90s.</p>"
+    assert render(text, smart_punctuation=True) == (
+        "<p>“Hello,” she said – it’s 5 o’clock… ‘quoted’ — done, "
+        "in the ’90s.</p>")
+
+
+def test_smart_punctuation_leaves_code_and_html_alone():
+    out = render('Use `"x" -- y` and <a title="t">"in"</a> with **"bold"**.', smart_punctuation=True)
+    assert '<code>&quot;x&quot; -- y</code>' in out
+    assert '<a title="t">“in”</a>' in out
+    assert "<strong>“bold”</strong>" in out
+    assert render("```\n\"a\" -- b\n```", smart_punctuation=True) == "<pre><code>&quot;a&quot; -- b\n</code></pre>"

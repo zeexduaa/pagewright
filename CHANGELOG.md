@@ -26,8 +26,11 @@ First version. Everything is new:
 - `pagewright build --profile [N]` shows the slowest outputs and build steps.
 - Reference-style links and footnotes in Markdown.
 - Definition lists in Markdown.
+- `smart_punctuation` setting for curly quotes, dashes and ellipses.
 
 ### Fixed before release
+
+- A `summary` in front matter ignored `allow_html = false`; it now uses the site's Markdown settings.
 
 - Values plugins put in `site.data` (such as the starter's word count) weren't part of the cache fingerprint, so pages showing them could go stale.
 
