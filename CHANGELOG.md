@@ -14,6 +14,10 @@ First version. Everything is new:
 - CLI: `new`, `build`, `serve`, `post`.
 - Default theme with light and dark modes and client-side search.
 
+### Added since
+
+- Task lists in Markdown: `- [ ]` and `- [x]`.
+
 ### Fixed before release
 
 - Headings like "Same", "Same", "Same-1" got two `same-1` ids; ids are now always unique.

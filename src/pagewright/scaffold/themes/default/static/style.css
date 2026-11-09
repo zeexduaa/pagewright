@@ -101,3 +101,7 @@ h1 { font-size: 2.1rem; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
   .search input { width: 100%; }
   .search-results { left: 0; right: auto; width: 100%; }
 }
+
+/* Task lists: - [ ] / - [x] */
+li.task-list-item { list-style: none; margin-left: -1.4em; }
+li.task-list-item input { margin: 0 .45em 0 0; vertical-align: -.1em; accent-color: var(--accent); }

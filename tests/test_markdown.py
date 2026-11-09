@@ -256,3 +256,14 @@ def test_unknown_entities_are_escaped_and_known_ones_kept():
 def test_spaces_in_angle_bracket_urls_are_encoded():
     assert 'href="my%20file.html"' in render("[a](<my file.html>)")
     assert 'src="a%20b.png"' in render("![x](<a b.png>)")
+
+
+def test_task_lists():
+    out = render("- [ ] todo\n- [x] **done**\n- [] not a task\n- plain")
+    assert '<li class="task-list-item"><input type="checkbox" disabled /> todo</li>' in out
+    assert '<li class="task-list-item"><input type="checkbox" disabled checked /> <strong>done</strong></li>' in out
+    assert "<li>[] not a task</li>" in out and "<li>plain</li>" in out
+    loose = render("- [ ] one\n\n- [x] two")
+    assert '<p><input type="checkbox" disabled /> one</p>' in loose
+    assert "<li>[ ] numbered</li>" in render("1. [ ] numbered")  # GitHub only does bullets
+    assert "<li>[ ]</li>" in render("- [ ]")                      # needs text after the box

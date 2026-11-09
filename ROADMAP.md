@@ -8,7 +8,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 
 - [ ] **Reference-style links**: `[text][ref]` and `[ref]: https://…` definitions, collected in a pass before inline parsing. (M)
 - [ ] **Footnotes**: `[^1]` references and `[^1]: …` definitions, rendered as a numbered list with back-links at the end of the page. (M)
-- [ ] **Task lists**: `- [ ]` and `- [x]` as disabled checkboxes, GFM-style. (S)
+- [x] **Task lists**: `- [ ]` and `- [x]` as disabled checkboxes, GFM-style. (S)
 - [ ] **Definition lists**: `Term` followed by `: definition` lines, rendered as `<dl>`. (S)
 - [ ] **Smart punctuation**: optional curly quotes, en/em dashes and ellipses, never inside code. (S)
 - [ ] **YAML front matter**: `---` blocks with a small, safe YAML subset (scalars, lists, one level of maps), since PyYAML is a dependency we don't want. (L)

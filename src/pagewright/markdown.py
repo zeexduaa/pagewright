@@ -325,6 +325,7 @@ HTML_BLOCK_TAGS = (
     "address|article|aside|blockquote|details|dialog|div|dl|fieldset|figcaption|figure|footer|form|h[1-6]|"
     "header|hr|iframe|main|nav|ol|p|pre|section|summary|table|ul|video|audio|picture|script|style|svg|!--"
 )
+TASK = re.compile(r"^\[([ xX])\][ \t]+(?=\S)")
 HTML_BLOCK = re.compile(rf"^ {{0,3}}<(?:/?(?:{HTML_BLOCK_TAGS})(?:[\s/>]|$))", re.IGNORECASE)
 
 
@@ -539,12 +540,22 @@ class Markdown:
         start_attr = f' start="{start_number}"' if ordered and start_number != 1 else ""
         rendered = []
         for item in items:
+            # GFM task list item: "- [ ] todo" / "- [x] done"
+            task = TASK.match(item[0]) if item and not ordered else None
+            if task:
+                item = [item[0][task.end():], *item[1:]]
             inner = self._blocks(item)
+            li = "<li>"
+            if task:
+                checked = " checked" if task.group(1) in "xX" else ""
+                box = f'<input type="checkbox" disabled{checked} /> '
+                inner = inner[:3] + box + inner[3:] if inner.startswith("<p>") else box + inner
+                li = '<li class="task-list-item">'
             if not loose:
                 inner = re.sub(r"<p>(.*?)</p>", r"\1", inner, flags=re.DOTALL)
-                rendered.append(f"<li>{inner}</li>")
+                rendered.append(f"{li}{inner}</li>")
             else:
-                rendered.append(f"<li>\n{inner}\n</li>")
+                rendered.append(f"{li}\n{inner}\n</li>")
         out.append(f"<{tag}{start_attr}>\n" + "\n".join(rendered) + f"\n</{tag}>")
         return i
 

@@ -52,13 +52,14 @@ Supported:
 - bullet and numbered lists (nested, tight or loose, any start number);
 - fenced code (```` ``` ```` or `~~~`, with a language class) and indented code;
 - GFM tables with alignment;
+- task lists: `- [ ] to do` and `- [x] done` (bullet lists only, as on GitHub);
 - thematic breaks (`---`, `***`, `___`);
 - raw HTML blocks and inline HTML (unless `markdown.allow_html = false`);
 - backslash escapes and HTML entities.
 
 `javascript:`, `vbscript:` and `data:` URLs in links and images are replaced with `#`. Put images in `static/` instead.
 
-Not yet supported (see the roadmap): reference-style links, footnotes, task lists, definition lists, syntax highlighting and smart quotes.
+Not yet supported (see the roadmap): reference-style links, footnotes, definition lists, syntax highlighting and smart quotes.
 
 ## Summaries
 
