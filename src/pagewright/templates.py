@@ -32,7 +32,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 # ---- Values --------------------------------------------------------------------------------
 
@@ -235,7 +235,14 @@ class Call(Expr):
             raise TemplateError(f"{_describe(self.func)} is not defined")
         if not callable(func):
             raise TemplateError(f"{_describe(self.func)} is not callable")
-        return func(*[a.eval(ctx) for a in self.args], **{k: v.eval(ctx) for k, v in self.kwargs.items()})
+        args = [a.eval(ctx) for a in self.args]
+        kwargs = {k: v.eval(ctx) for k, v in self.kwargs.items()}
+        try:
+            return func(*args, **kwargs)
+        except TemplateError:
+            raise
+        except Exception as exc:  # e.g. a plugin global that raises: report where, not a traceback
+            raise TemplateError(f"calling {_describe(self.func)} failed: {type(exc).__name__}: {exc}") from exc
 
 
 @dataclass
@@ -250,7 +257,15 @@ class Filter(Expr):
         if func is None:
             raise TemplateError(f"unknown filter {self.name!r}")
         value = self.target.eval(ctx)
-        return func(value, *[a.eval(ctx) for a in self.args], **{k: v.eval(ctx) for k, v in self.kwargs.items()})
+        args = [a.eval(ctx) for a in self.args]
+        kwargs = {k: v.eval(ctx) for k, v in self.kwargs.items()}
+        try:
+            return func(value, *args, **kwargs)
+        except TemplateError:
+            raise
+        except Exception as exc:  # `none | length`, `[] | max`, a buggy plugin filter...
+            shown = "undefined" if isinstance(value, Undefined) else type(value).__name__
+            raise TemplateError(f"filter {self.name!r} failed on {shown} value: {type(exc).__name__}: {exc}") from exc
 
 
 @dataclass
@@ -659,11 +674,13 @@ class Block(Node):
     body: list[Node]
 
     def render(self, ctx: Context, out: list[str]) -> None:
-        chain = ctx.blocks.get(self.name, [self.body])
+        chain = ctx.blocks.get(self.name, [(ctx.template_name, self.body)])
         _render_block(chain, 0, ctx, out)
 
 
-def _render_block(chain: list[list[Node]], level: int, ctx: Context, out: list[str]) -> None:
+def _render_block(chain: list[tuple[str, list[Node]]], level: int, ctx: Context, out: list[str]) -> None:
+    """Renders one version of a block. Errors name the template the block was written in
+    (page.html), not the one that placed it (base.html)."""
     def super_() -> Markup:
         if level + 1 >= len(chain):
             return Markup("")
@@ -671,12 +688,16 @@ def _render_block(chain: list[list[Node]], level: int, ctx: Context, out: list[s
         _render_block(chain, level + 1, ctx, parent)
         return Markup("".join(parent))
 
+    owner, body = chain[level]
+    saved_name = ctx.template_name
+    ctx.template_name = owner
     ctx.push()
     ctx.set("super", super_)
     try:
-        render_nodes(chain[level], ctx, out)
+        render_nodes(body, ctx, out)
     finally:
         ctx.pop()
+        ctx.template_name = saved_name
 
 
 @dataclass
@@ -816,7 +837,7 @@ class Context:
         self.env = env
         self.template_name = template_name
         self.scopes: list[dict[str, Any]] = [dict(env.globals), dict(variables)]
-        self.blocks: dict[str, list[list[Node]]] = {}
+        self.blocks: dict[str, list[tuple[str, list[Node]]]] = {}
 
     def lookup(self, name: str) -> Any:
         if name.startswith("_"):
@@ -865,10 +886,10 @@ class Template:
             current = self.env.get_template(parent_name)
             chain.append(current)
         saved_blocks, saved_name = ctx.blocks, ctx.template_name
-        blocks: dict[str, list[list[Node]]] = {}
+        blocks: dict[str, list[tuple[str, list[Node]]]] = {}
         for template in chain:
             for name, body in template.blocks.items():
-                blocks.setdefault(name, []).append(body)
+                blocks.setdefault(name, []).append((template.name, body))
         # An included template's own blocks shouldn't leak into the page that includes it.
         ctx.blocks = {**saved_blocks, **blocks} if self.extends is None and saved_blocks else blocks
         root = chain[-1]
@@ -1029,16 +1050,30 @@ def _join(value: Any, separator: str = "", attribute: str | None = None) -> Any:
     return separator.join(str(i) for i in items)
 
 
-def _batch(value: Any, size: int) -> list[list[Any]]:
+def _batch(value: Any, size: int, fill: Any = None) -> list[list[Any]]:
+    if not isinstance(size, int) or isinstance(size, bool) or size < 1:
+        raise TemplateError(f"batch size must be a whole number of at least 1, not {size!r}")
     items = list(value)
-    return [items[i:i + size] for i in range(0, len(items), max(1, size))]
+    rows = [items[i:i + size] for i in range(0, len(items), size)]
+    if fill is not None and rows and len(rows[-1]) < size:
+        rows[-1] += [fill] * (size - len(rows[-1]))
+    return rows
 
 
-def _groupby(value: Any, attribute: str) -> list[tuple[Any, list[Any]]]:
+class Group(NamedTuple):
+    """One groupby result: use g.grouper and g.list, or unpack with {% for key, items in ... %}."""
+    grouper: Any
+    list: list[Any]
+
+
+def _groupby(value: Any, attribute: str) -> list[Group]:
     groups: dict[Any, list[Any]] = {}
     for item in value:
-        groups.setdefault(get_attr(item, attribute), []).append(item)
-    return list(groups.items())
+        key = item
+        for part in attribute.split("."):
+            key = get_attr(key, part)
+        groups.setdefault(None if isinstance(key, Undefined) else key, []).append(item)
+    return [Group(k, v) for k, v in groups.items()]
 
 
 def _striptags(value: Any) -> str:

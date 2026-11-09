@@ -22,6 +22,7 @@ definition lists and task-list checkboxes.
 from __future__ import annotations
 
 import html
+import html.entities
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -102,7 +103,18 @@ AUTOLINK = re.compile(r"<((?:https?|ftp)://[^\s<>]+|mailto:[^\s<>]+|[\w.+-]+@[\w
 def safe_url(url: str) -> str:
     url = url.strip()
     compact = re.sub(r"[\x00-\x20]", "", url)
-    return url if SAFE_URL.match(compact) else "#"
+    if not SAFE_URL.match(compact):
+        return "#"
+    return re.sub(r"[\x00-\x20\x7f]", lambda m: f"%{ord(m.group(0)):02X}", url)  # <a b.html> -> a%20b.html
+
+
+def _known_entity(entity: str) -> bool:
+    """&copy; and &#169; are real; &bogus; isn't, so it gets escaped like any other text."""
+    if entity.startswith("&#"):
+        digits = entity[3:-1] if entity[2] in "xX" else entity[2:-1]
+        code = int(digits, 16 if entity[2] in "xX" else 10)
+        return 0 < code <= 0x10FFFF and not 0xD800 <= code <= 0xDFFF
+    return entity[1:] in html.entities.html5
 
 
 class InlineParser:
@@ -161,7 +173,7 @@ class InlineParser:
                 continue
             if ch == "&":
                 m = ENTITY.match(text, i)
-                if m:
+                if m and _known_entity(m.group(0)):
                     out.append(self._keep(m.group(0)))  # &copy; &#169; &amp; stay as written
                     i = m.end()
                     continue
@@ -335,9 +347,16 @@ class Markdown:
 
     def _unique_id(self, text: str) -> str:
         base = slugify(text)
+        # Count up from the last suffix used for this base, skipping ids that are already taken,
+        # so "Same", "Same", "Same-1" become same, same-1, same-1-1 rather than two same-1s.
         count = self._used_ids.get(base, 0)
+        candidate = base if count == 0 else f"{base}-{count}"
+        while candidate in self._used_ids:
+            count += 1
+            candidate = f"{base}-{count}"
         self._used_ids[base] = count + 1
-        return base if count == 0 else f"{base}-{count}"
+        self._used_ids.setdefault(candidate, 1)
+        return candidate
 
     def _heading(self, level: int, raw: str) -> str:
         inner = self._inline.render(raw.strip())

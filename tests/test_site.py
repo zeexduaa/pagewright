@@ -300,3 +300,22 @@ def test_lower_weight_comes_first_in_menu_and_sections(site_dir):
     menu = [p.title for p in site.site_context()["menu"]]
     assert menu == ["Contact", "Zebra", "About"]  # About has weight 10
     assert site.sections["posts"][0].title == "Pinned"
+
+
+def test_tags_differing_only_in_case_are_merged(site_dir):
+    write(site_dir / "content/posts/a.md", '+++\ntitle = "A"\ndate = 2026-03-01\ntags = ["Python"]\n+++\na\n')
+    write(site_dir / "content/posts/b.md", '+++\ntitle = "B"\ndate = 2026-03-02\ntags = ["python"]\n+++\nb\n')
+    site = Site(site_dir)
+    site.load()
+    names = [t for t in site.tags if t.lower() == "python"]
+    assert len(names) == 1 and {p.title for p in site.tags[names[0]]} == {"A", "B"}
+    build(site_dir)
+    page = read(site_dir, "tags/python/index.html")
+    assert ">A<" in page and ">B<" in page
+
+
+def test_different_tags_with_the_same_url_are_an_error(site_dir):
+    write(site_dir / "content/posts/c.md", '+++\ntitle = "C"\ndate = 2026-03-01\ntags = ["C"]\n+++\nc\n')
+    write(site_dir / "content/posts/cpp.md", '+++\ntitle = "C++"\ndate = 2026-03-02\ntags = ["C++"]\n+++\ncpp\n')
+    with pytest.raises(BuildError, match=r"would both be /tags/c/"):
+        build(site_dir)

@@ -282,3 +282,40 @@ def test_selectattr_and_rejectattr_forms(env):
         names("selectattr('weight', '~', 1, 2)")
     with pytest.raises(TemplateError, match="can't compare"):
         names("selectattr('section', '>', 3)")
+
+
+def test_groupby_gives_grouper_and_list_and_unpacks(env):
+    items = [{"k": "b", "n": 1}, {"k": "a", "n": 2}, {"k": "b", "n": 3}]
+    assert r(env, "{% for g in items | groupby('k') %}{{ g.grouper }}={{ g.list | map('n') | join(',') }};{% endfor %}",
+             items=items) == "b=1,3;a=2;"
+    assert r(env, "{% for key, group in items | groupby('k') %}{{ key }}{{ group | length }}{% endfor %}",
+             items=items) == "b2a1"
+
+
+def test_batch_fills_and_rejects_bad_sizes(env):
+    assert r(env, "{{ [1, 2, 3] | batch(2, 0) }}") == "[[1, 2], [3, 0]]"
+    with pytest.raises(TemplateError, match="at least 1"):
+        r(env, "{{ [1] | batch(0) }}")
+
+
+def test_errors_inside_filters_and_calls_say_where(env):
+    with pytest.raises(TemplateError, match="filter 'length' failed") as exc:
+        env.from_string("ok\n{{ none | length }}", name="page.html").render({})
+    assert exc.value.line == 2 and exc.value.name == "page.html"
+    with pytest.raises(TemplateError, match="filter 'max' failed"):
+        r(env, "{{ [] | max }}")
+
+    def boom():
+        raise RuntimeError("kaboom")
+    env.globals["boom"] = boom
+    with pytest.raises(TemplateError, match="calling 'boom' failed: RuntimeError: kaboom"):
+        r(env, "{{ boom() }}")
+
+
+def test_errors_in_a_block_name_the_child_template(tmp_path):
+    (tmp_path / "base.html").write_text("<main>\n{% block content %}{% endblock %}\n</main>")
+    (tmp_path / "page.html").write_text('{% extends "base.html" %}\n{% block content %}\nfine\n{{ none | length }}\n{% endblock %}')
+    env = Environment([tmp_path])
+    with pytest.raises(TemplateError) as exc:
+        env.render("page.html")
+    assert exc.value.name == "page.html" and exc.value.line == 4

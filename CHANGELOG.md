@@ -13,3 +13,14 @@ First version. Everything is new:
 - Dev server with live reload and in-browser build errors.
 - CLI: `new`, `build`, `serve`, `post`.
 - Default theme with light and dark modes and client-side search.
+
+### Fixed before release
+
+- Headings like "Same", "Same", "Same-1" got two `same-1` ids; ids are now always unique.
+- Unknown entities such as `&bogus;` were passed through; they are now escaped.
+- Spaces in `<…>` link and image URLs are encoded as `%20`.
+- `groupby` returned plain pairs, so `g.grouper` and `g.list` were empty; it now gives both and still unpacks.
+- `batch(0)` returned empty lists; it is now an error, and the `fill` argument works.
+- An error inside a filter or function call (`none | length`, a buggy plugin filter) crashed the CLI with a traceback; it is now a template error with the file and line.
+- Errors inside a `{% block %}` named the parent template; they now name the template the block is in.
+- Tags whose names make the same URL ("C" and "C++" are both `/tags/c/`) silently overwrote each other; that is now an error, and tags differing only in case are merged.

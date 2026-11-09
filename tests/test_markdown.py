@@ -1,3 +1,4 @@
+import re
 import pytest
 
 from pagewright.markdown import Markdown, render, safe_url, slugify
@@ -145,7 +146,7 @@ def test_links_and_titles():
     assert md("[wiki](https://en.wikipedia.org/wiki/Foo_(bar))") == (
         '<p><a href="https://en.wikipedia.org/wiki/Foo_(bar)">wiki</a></p>'
     )
-    assert md("[x](<with spaces.html>)") == '<p><a href="with spaces.html">x</a></p>'
+    assert md("[x](<with spaces.html>)") == '<p><a href="with%20spaces.html">x</a></p>'
 
 
 def test_not_a_link():
@@ -238,3 +239,20 @@ def test_html_entities_pass_through():
         "<p>AT&amp;T &copy; &#169; &#xA9; a&amp;b &amp;notanentity</p>"
     )
     assert md("`&copy;`") == "<p><code>&amp;copy;</code></p>"  # literal inside code
+
+
+def test_heading_ids_stay_unique_when_a_title_looks_like_a_suffix():
+    out = render("## Same\n## Same\n## Same-1\n## Same")
+    ids = re.findall(r'id="([^"]+)"', out)
+    assert ids == ["same", "same-1", "same-1-1", "same-2"]
+    assert len(set(ids)) == len(ids)
+
+
+def test_unknown_entities_are_escaped_and_known_ones_kept():
+    out = render("&bogus; &copy; &#169; &#x41; &#0;")
+    assert out == "<p>&amp;bogus; &copy; &#169; &#x41; &amp;#0;</p>"
+
+
+def test_spaces_in_angle_bracket_urls_are_encoded():
+    assert 'href="my%20file.html"' in render("[a](<my file.html>)")
+    assert 'src="a%20b.png"' in render("![x](<a b.png>)")

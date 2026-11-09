@@ -227,10 +227,21 @@ class Site:
 
     @property
     def tags(self) -> dict[str, list[Page]]:
+        """Pages by tag. Spellings that differ only in case ("Python", "python") are one tag, shown
+        with the first spelling found; different tags that would share a URL are an error."""
         tags: dict[str, list[Page]] = {}
+        by_slug: dict[str, tuple[str, Page]] = {}
         for page in self.posts + [p for p in self.pages if not p.is_post]:
             for tag in page.tags:
-                tags.setdefault(tag, []).append(page)
+                slug = slugify(tag)
+                if slug not in by_slug:
+                    by_slug[slug] = (tag, page)
+                name, first_page = by_slug[slug]
+                if tag.casefold() != name.casefold():
+                    raise BuildError(f"tags {name!r} (content/{first_page.source}) and {tag!r} "
+                                     f"(content/{page.source}) would both be /tags/{slug}/; rename one of them")
+                if page not in tags.setdefault(name, []):
+                    tags[name].append(page)
         return dict(sorted(tags.items(), key=lambda kv: kv[0].lower()))
 
     def site_context(self) -> dict[str, Any]:
