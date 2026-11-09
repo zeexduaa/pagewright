@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tags</h1>
+<ul class="tag-cloud">
+  {%- for t in site.tags %}
+  <li><a href="{{ t.url }}">#{{ t.name }}</a> <span>{{ t.count }}</span></li>
+  {%- else %}
+  <li>No tags yet.</li>
+  {%- endfor %}
+</ul>
+{% endblock %}

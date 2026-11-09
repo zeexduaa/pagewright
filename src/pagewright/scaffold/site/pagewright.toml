@@ -1,0 +1,18 @@
+# pagewright site settings. See https://github.com/zeexduaa/pagewright for every option.
+title = "My Site"
+description = "Notes, posts and projects."
+author = "Your Name"
+base_url = "https://example.com"    # where the site will live; used in the feed and sitemap
+language = "en"
+theme = "default"                   # themes/default is yours to edit
+posts_per_page = 10
+
+# Plugins are Python files in plugins/. Uncomment to enable the example one:
+# plugins = ["word_count"]
+
+[markdown]
+allow_html = true                   # raw HTML in Markdown is kept as-is
+
+[extra]
+# Anything here is available to templates as site.extra, e.g. site.extra.github
+github = ""

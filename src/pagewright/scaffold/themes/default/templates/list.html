@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if tag %}#{{ tag.name }}{% elif section %}{{ section.title }}{% else %}{{ site.title }}{% endif %}</h1>
+{%- if tag %}<p class="meta">{{ tag.count }} page{% if tag.count != 1 %}s{% endif %} tagged “{{ tag.name }}”</p>{% endif %}
+{%- if page and page.content and paginator.number == 1 %}<div class="prose">{{ content }}</div>{% endif %}
+{% include "partials/post-list.html" %}
+{% include "partials/pagination.html" %}
+{% endblock %}

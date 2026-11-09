@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="page">
+  {%- if page.show_toc and toc %}
+  <nav class="toc" aria-label="Contents"><strong>Contents</strong>{{ toc }}</nav>
+  {%- endif %}
+  <div class="prose">{{ content }}</div>
+</article>
+{% endblock %}

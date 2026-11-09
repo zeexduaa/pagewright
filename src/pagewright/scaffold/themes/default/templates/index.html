@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+{%- if page and paginator.number == 1 %}
+<section class="intro prose">{{ content }}</section>
+{%- endif %}
+<h2 class="list-heading">{% if paginator.number == 1 %}Latest posts{% else %}Older posts{% endif %}</h2>
+{% include "partials/post-list.html" %}
+{% include "partials/pagination.html" %}
+{% endblock %}

@@ -1,0 +1,19 @@
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="brand" href="/">{{ site.title }}</a>
+    <nav aria-label="Main">
+      {%- for item in site.menu %}
+      <a href="{{ item.url }}">{{ item.title }}</a>
+      {%- endfor %}
+      {%- for name, items in site.sections %}
+      <a href="/{{ name | slugify }}/">{{ name | replace("-", " ") | title }}</a>
+      {%- endfor %}
+      {%- if site.tags %}<a href="/tags/">Tags</a>{% endif %}
+    </nav>
+    <form class="search" role="search" onsubmit="return false">
+      <label class="visually-hidden" for="search-input">Search</label>
+      <input id="search-input" type="search" placeholder="Search…" autocomplete="off">
+      <ul id="search-results" class="search-results" hidden></ul>
+    </form>
+  </div>
+</header>

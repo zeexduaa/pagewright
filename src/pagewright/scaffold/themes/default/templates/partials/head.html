@@ -1,0 +1,11 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{%- set page_title = page.title if page and page.url != "/" else (section.title if section else (("#" ~ tag.name) if tag else "")) %}
+<title>{% block title %}{% if page_title %}{{ page_title }} · {% endif %}{{ site.title }}{% endblock %}</title>
+<meta name="description" content="{{ (page.description if page and page.description else (page.summary | striptags | truncate(160) if page else site.description)) }}">
+<meta name="generator" content="pagewright {{ pagewright_version }}">
+<link rel="canonical" href="{{ absolute_url(page.url if page else (paginator.url_for(paginator.number) if paginator else '/')) }}">
+<link rel="alternate" type="application/atom+xml" title="{{ site.title }}" href="/feed.xml">
+<link rel="stylesheet" href="/style.css">
+<meta property="og:title" content="{{ page_title or site.title }}">
+<meta property="og:site_name" content="{{ site.title }}">

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="post">
+  <header>
+    <h1>{{ page.title }}</h1>
+    <p class="meta">
+      {%- if page.date %}<time datetime="{{ page.date | date('%Y-%m-%d') }}">{{ page.date | date }}</time>{% endif %}
+      {%- if page.updated %} · updated {{ page.updated | date }}{% endif %}
+      · {{ content | reading_time }} min read
+    </p>
+    {%- if page.tags %}
+    <p class="tags">{% for t in page.tag_links %}<a class="tag" href="{{ t.url }}">#{{ t.name }}</a> {% endfor %}</p>
+    {%- endif %}
+  </header>
+  {%- if page.show_toc and toc %}
+  <nav class="toc" aria-label="Contents"><strong>Contents</strong>{{ toc }}</nav>
+  {%- endif %}
+  <div class="prose">{{ content }}</div>
+</article>
+{% endblock %}

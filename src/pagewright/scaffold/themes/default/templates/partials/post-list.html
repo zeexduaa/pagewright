@@ -1,0 +1,16 @@
+{%- if posts %}
+<ul class="post-list">
+  {%- for post in posts %}
+  <li>
+    <a class="post-title" href="{{ post.url }}">{{ post.title }}</a>
+    <div class="meta">
+      {%- if post.date %}<time datetime="{{ post.date | date('%Y-%m-%d') }}">{{ post.date | date }}</time>{% endif %}
+      {%- if post.tags %} · {% for t in post.tag_links %}<a class="tag" href="{{ t.url }}">#{{ t.name }}</a> {% endfor %}{% endif %}
+    </div>
+    {%- if post.summary %}<div class="summary">{{ post.summary }}</div>{% endif %}
+  </li>
+  {%- endfor %}
+</ul>
+{%- else %}
+<p class="empty">Nothing here yet.</p>
+{%- endif %}

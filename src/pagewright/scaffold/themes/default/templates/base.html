@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="{{ site.language }}">
+<head>
+  {% include "partials/head.html" %}
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  {% include "partials/header.html" %}
+  <main id="main" class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "partials/footer.html" %}
+  <script src="/search.js" defer></script>
+</body>
+</html>
