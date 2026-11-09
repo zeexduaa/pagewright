@@ -68,6 +68,10 @@ class Page:
     summary: Markup = Markup("")
     headings: list[Heading] = field(default_factory=list)
     toc: Markup = Markup("")
+    # Filled in by Site.load() for posts:
+    prev: Page | None = field(default=None, repr=False, compare=False)     # the older post in this section
+    next: Page | None = field(default=None, repr=False, compare=False)     # the newer one
+    related: list[Page] = field(default_factory=list, repr=False, compare=False)
 
     @property
     def output_path(self) -> str:

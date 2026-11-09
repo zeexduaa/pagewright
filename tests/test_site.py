@@ -360,3 +360,32 @@ def test_plugin_data_changes_rerender_pages_that_show_it(site_dir):
     post.write_text(post.read_text() + "\nThree more words.\n")
     build(site_dir)
     assert read(site_dir, "about/index.html") != before
+
+
+def test_prev_next_and_related_posts(site_dir):
+    write(site_dir / "content/posts/2026-02-01-third.md", '+++\ntitle = "Third"\ntags = ["intro", "x"]\n+++\nt\n')
+    write(site_dir / "content/notes/2026-02-02-note.md", '+++\ntitle = "A note"\ntags = ["intro"]\n+++\nn\n')
+    site = Site(site_dir)
+    site.load()
+    posts = {p.title: p for p in site.posts}
+    hello, guide, third = posts["Hello, world"], posts["A quick Markdown guide"], posts["Third"]
+    assert hello.prev is None and hello.next is guide
+    assert guide.prev is hello and guide.next is third
+    assert third.next is None
+    assert posts["A note"].prev is None and posts["A note"].next is None  # its own section
+    assert [p.title for p in third.related] == ["A note"]  # shares "intro", across sections
+    assert [p.title for p in hello.related] == ["A quick Markdown guide"]
+
+    build(site_dir)
+    page = read(site_dir, "posts/markdown-guide/index.html")
+    assert 'rel="prev"' in page and "Hello, world" in page and 'rel="next"' in page and "Third" in page
+
+
+def test_related_ranks_by_shared_tags(site_dir):
+    for name, tags in (("a", '["p", "q", "r"]'), ("b", '["p"]'), ("c", '["p", "q"]'), ("d", '["z"]')):
+        write(site_dir / f"content/blog/2026-03-0{'abcd'.index(name) + 1}-{name}.md",
+              f'+++\ntitle = "{name}"\ntags = {tags}\n+++\n.\n')
+    site = Site(site_dir)
+    site.load()
+    a = next(p for p in site.posts if p.title == "a")
+    assert [p.title for p in a.related] == ["c", "b"]

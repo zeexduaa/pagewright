@@ -20,6 +20,7 @@ First version. Everything is new:
 - `{% raw %}…{% endraw %}` in templates.
 - `loop.previtem`, `loop.nextitem`, `loop.revindex0` and `loop.changed()`; `dictsort` and `items` filters.
 - Data files: `data/*.toml` and `data/*.json` in `site.data`.
+- `page.prev`, `page.next` and `page.related`, shown at the end of posts in the default theme.
 
 ### Fixed before release
 

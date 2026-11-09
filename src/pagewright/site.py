@@ -252,8 +252,31 @@ class Site:
                     page.content = Markup(result)
         self.pages = pages
         report.pages = len(pages)
+        self._link_posts()
         self._hook("on_site", self)
         return report
+
+    RELATED_LIMIT = 5
+
+    def _link_posts(self) -> None:
+        """Sets page.prev / page.next (within a section, by date) and page.related (by shared tags)."""
+        for page in self.pages:
+            page.prev = page.next = None
+            page.related = []
+        by_section: dict[str, list[Page]] = {}
+        for post in self.posts:  # newest first
+            by_section.setdefault(post.section, []).append(post)
+        for items in by_section.values():
+            for newer, older in zip(items, items[1:]):
+                newer.prev, older.next = older, newer
+        posts = self.posts
+        for post in posts:
+            if not post.tags:
+                continue
+            mine = {t.casefold() for t in post.tags}
+            scored = [(len(mine & {t.casefold() for t in other.tags}), other) for other in posts if other is not post]
+            # Most tags in common first; ties keep newest-first order (sorted is stable).
+            post.related = [p for n, p in sorted((s for s in scored if s[0]), key=lambda s: -s[0])][:self.RELATED_LIMIT]
 
     @property
     def posts(self) -> list[Page]:

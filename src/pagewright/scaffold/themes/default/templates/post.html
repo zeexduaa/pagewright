@@ -16,5 +16,17 @@
   <nav class="toc" aria-label="Contents"><strong>Contents</strong>{{ toc }}</nav>
   {%- endif %}
   <div class="prose">{{ content }}</div>
+  {%- if page.related %}
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>{% for p in page.related | slice(0, 3) %}<li><a href="{{ p.url }}">{{ p.title }}</a></li>{% endfor %}</ul>
+  </aside>
+  {%- endif %}
+  {%- if page.prev or page.next %}
+  <nav class="post-nav" aria-label="More posts">
+    {%- if page.prev %}<a class="prev" href="{{ page.prev.url }}" rel="prev">← {{ page.prev.title }}</a>{% else %}<span></span>{% endif %}
+    {%- if page.next %}<a class="next" href="{{ page.next.url }}" rel="next">{{ page.next.title }} →</a>{% endif %}
+  </nav>
+  {%- endif %}
 </article>
 {% endblock %}

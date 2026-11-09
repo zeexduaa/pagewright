@@ -96,6 +96,8 @@ List pages (home, sections, tags) also get `posts` (this page's items) and `pagi
 
 `title`, `url`, `date`, `updated`, `tags`, `tag_links` (`{name, url}`), `section`, `summary` (safe HTML), `description`, `draft`, `weight`, `show_toc`, `headings` (`{level, text, id}`), `extra`, `source` (path in `content/`) and `is_post`.
 
+For posts there's also `prev` (the older post in the same section), `next` (the newer one) and `related` (up to 5 posts from any section sharing the most tags, newest first among ties). Each is a page, or empty.
+
 ## Filters
 
 | Filter | Example | Notes |

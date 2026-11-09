@@ -105,3 +105,13 @@ h1 { font-size: 2.1rem; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
 /* Task lists: - [ ] / - [x] */
 li.task-list-item { list-style: none; margin-left: -1.4em; }
 li.task-list-item input { margin: 0 .45em 0 0; vertical-align: -.1em; accent-color: var(--accent); }
+
+/* Related posts and previous / next */
+.related { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.related h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.related ul { margin: 0; padding-left: 1.2rem; }
+.post-nav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+.post-nav a { max-width: 48%; color: var(--accent); text-decoration: none; }
+.post-nav a:hover { text-decoration: underline; }
+.post-nav .next { margin-left: auto; text-align: right; }
+@media (max-width: 560px) { .post-nav a { max-width: 100%; } }
