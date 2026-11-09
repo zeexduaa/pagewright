@@ -24,7 +24,7 @@ Each item is (or will be) a GitHub issue. Comment there before starting somethin
 - [x] **`{% raw %}` blocks** for showing template syntax on a page. (S)
 - [ ] **Template allow-list for calls**: only allow calling known-safe methods (str methods, `loop.cycle`, `paginator.url_for`, plugin globals) instead of any public method. (M)
 - [ ] **Better template errors**: show the offending line with a caret, and the include/extends chain that led to it. (M)
-- [ ] **`loop.previtem` / `loop.nextitem`, `dictsort` and `items` filters**: common Jinja features theme authors expect. (S)
+- [x] **`loop.previtem` / `loop.nextitem`, `dictsort` and `items` filters**: common Jinja features theme authors expect. (S)
 - [ ] **Theme config**: a `theme.toml` with defaults that sites can override under `[extra]`, and `pagewright theme list`. (M)
 
 ## v0.4: Site structure

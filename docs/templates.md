@@ -50,12 +50,14 @@ So you can override one template of a theme without copying the rest.
 {% if x %}…{% elif y %}…{% else %}…{% endif %}
 
 {% for post in posts %}
-  {{ loop.index }}/{{ loop.length }}   {# also loop.index0, first, last, revindex, loop.cycle("odd", "even") #}
+  {{ loop.index }}/{{ loop.length }}   {# also loop.index0, revindex, revindex0, first, last, previtem, nextitem #}
+  {{ loop.cycle("odd", "even") }}
+  {% if loop.changed(post.date.year) %}<h2>{{ post.date.year }}</h2>{% endif %}
 {% else %}
   No posts yet.
 {% endfor %}
 
-{% for name, url in [["Home", "/"], ["About", "/about/"]] %}…{% endfor %}   {# unpacking pairs #}
+{% for key, value in page.extra | dictsort %}…{% endfor %}   {# unpacking pairs #}
 
 {% set title = page.title | upper %}
 
@@ -103,11 +105,13 @@ List pages (home, sections, tags) also get `posts` (this page's items) and `pagi
 | `capitalize`, `lower`, `upper`, `title` | | |
 | `count`, `length` | `posts | length` | |
 | `date(fmt="%Y-%m-%d")` | `page.date | date("%-d %b %Y")` | `%-d` works on Windows too |
+| `dictsort(by="key", reverse=false, case_sensitive=false)` | `page.extra | dictsort` | sorted `(key, value)` pairs |
 | `default(value, boolean=false)` | `page.description | default(site.description)` | |
 | `escape` / `e` | | escapes text; safe text is left as it is |
 | `first`, `last` | | |
 | `groupby(attr)` | `posts | groupby("section")` | `{grouper, list}` items |
 | `indent(n=4)` | | |
+| `items` | `site.extra | items` | `(key, value)` pairs in their own order |
 | `join(sep="", attr=none)` | `tags | join(", ", "name")` | |
 | `list`, `string` | | |
 | `map(attr)` | `posts | map("title")` | |

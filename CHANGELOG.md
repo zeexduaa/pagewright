@@ -18,6 +18,7 @@ First version. Everything is new:
 
 - Task lists in Markdown: `- [ ]` and `- [x]`.
 - `{% raw %}…{% endraw %}` in templates.
+- `loop.previtem`, `loop.nextitem`, `loop.revindex0` and `loop.changed()`; `dictsort` and `items` filters.
 
 ### Fixed before release
 

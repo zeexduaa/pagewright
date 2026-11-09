@@ -29,7 +29,7 @@ import json
 import re
 import urllib.parse
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -616,7 +616,8 @@ class If(Node):
 class Loop:
     index0: int
     length: int
-    _previous: Any = None
+    _items: list[Any] = field(default_factory=list, repr=False)
+    _last_changed: Any = field(default=None, repr=False)
 
     @property
     def index(self) -> int:
@@ -625,6 +626,18 @@ class Loop:
     @property
     def revindex(self) -> int:
         return self.length - self.index0
+
+    @property
+    def revindex0(self) -> int:
+        return self.length - self.index0 - 1
+
+    @property
+    def previtem(self) -> Any:
+        return self._items[self.index0 - 1] if self.index0 > 0 else Undefined("loop.previtem")
+
+    @property
+    def nextitem(self) -> Any:
+        return self._items[self.index0 + 1] if self.index0 + 1 < self.length else Undefined("loop.nextitem")
 
     @property
     def first(self) -> bool:
@@ -636,6 +649,14 @@ class Loop:
 
     def cycle(self, *values: Any) -> Any:
         return values[self.index0 % len(values)] if values else ""
+
+    def changed(self, *values: Any) -> bool:
+        """True on the first pass and whenever the values differ from the last call, e.g.
+        {% if loop.changed(post.date.year) %}<h2>{{ post.date.year }}</h2>{% endif %}."""
+        if self._last_changed is None or self._last_changed != values:
+            self._last_changed = values
+            return True
+        return False
 
 
 @dataclass
@@ -659,6 +680,7 @@ class For(Node):
             render_nodes(self.empty, ctx, out)
             return
         ctx.push()
+        loop = Loop(0, len(items), items)
         try:
             for i, item in enumerate(items):
                 if len(self.targets) == 1:
@@ -672,7 +694,8 @@ class For(Node):
                         raise TemplateError(f"expected {len(self.targets)} values to unpack, got {len(values)}")
                     for name, v in zip(self.targets, values):
                         ctx.set(name, v)
-                ctx.set("loop", Loop(i, len(items)))
+                loop.index0 = i
+                ctx.set("loop", loop)
                 render_nodes(self.body, ctx, out)
         finally:
             ctx.pop()
@@ -1079,6 +1102,29 @@ def _batch(value: Any, size: int, fill: Any = None) -> list[list[Any]]:
     return rows
 
 
+def _not_mapping(name: str, value: Any) -> Any:
+    raise TemplateError(f"{name} needs a mapping (like page.extra), not {type(value).__name__}")
+
+
+def _dictsort(value: Any, by: str = "key", reverse: bool = False, case_sensitive: bool = False) -> list[tuple[Any, Any]]:
+    if isinstance(value, Undefined) or value is None:
+        return []
+    if not isinstance(value, Mapping):
+        _not_mapping("dictsort", value)
+    if by not in ("key", "value"):
+        raise TemplateError(f"dictsort can sort by 'key' or 'value', not {by!r}")
+    position = 0 if by == "key" else 1
+
+    def key(pair: tuple[Any, Any]) -> Any:
+        v = pair[position]
+        return v.lower() if isinstance(v, str) and not case_sensitive else _sort_key(None)(v)
+
+    try:
+        return sorted(value.items(), key=key, reverse=reverse)
+    except TypeError:
+        raise TemplateError(f"dictsort can't compare these {by}s") from None
+
+
 class Group(NamedTuple):
     """One groupby result: use g.grouper and g.list, or unpack with {% for key, items in ... %}."""
     grouper: Any
@@ -1127,6 +1173,8 @@ FILTERS: dict[str, Callable[..., Any]] = {
     "unique": lambda v: list(dict.fromkeys(v)),
     "list": lambda v: list(v),
     "batch": _batch,
+    "dictsort": _dictsort,
+    "items": lambda v: list(v.items()) if isinstance(v, Mapping) else [] if isinstance(v, Undefined) or v is None else _not_mapping("items", v),
     "groupby": _groupby,
     "map": lambda v, attribute: [get_attr(i, attribute) for i in v],
     "selectattr": lambda v, attribute, *args: [i for i in v if _attr_matches(i, attribute, args)],

@@ -336,3 +336,26 @@ def test_line_numbers_after_a_raw_block(env):
     with pytest.raises(TemplateError) as exc:
         r(env, "{% raw %}\n\n{% endraw %}\n{{ 1 / 0 }}")
     assert exc.value.line == 4
+
+
+def test_loop_neighbours_and_changed(env):
+    assert r(env, "{% for x in [1, 2, 3] %}{{ loop.previtem }}<{{ x }}>{{ loop.nextitem }}|{% endfor %}") == "<1>2|1<2>3|2<3>|"
+    assert r(env, "{% for x in 'abc' %}{{ loop.revindex0 }}{% endfor %}") == "210"
+    posts = [{"y": 2026, "t": "a"}, {"y": 2026, "t": "b"}, {"y": 2025, "t": "c"}]
+    out = r(env, "{% for p in posts %}{% if loop.changed(p.y) %}[{{ p.y }}]{% endif %}{{ p.t }}{% endfor %}", posts=posts)
+    assert out == "[2026]ab[2025]c"
+    nested = "{% for a in [1, 2] %}{% for b in [3, 4] %}{{ loop.index }}{% endfor %}{{ loop.index }};{% endfor %}"
+    assert r(env, nested) == "121;122;"
+
+
+def test_dictsort_and_items(env):
+    d = {"b": 2, "A": 3, "c": 1}
+    assert r(env, "{% for k, v in d | dictsort %}{{ k }}{{ v }}{% endfor %}", d=d) == "A3b2c1"
+    assert r(env, "{% for k, v in d | dictsort(by='value', reverse=true) %}{{ k }}{% endfor %}", d=d) == "Abc"
+    assert r(env, "{% for k, v in d | dictsort(case_sensitive=true) %}{{ k }}{% endfor %}", d=d) == "Abc"
+    assert r(env, "{{ d | items | length }}", d=d) == "3"
+    assert r(env, "{{ missing | dictsort | length }}") == "0"
+    with pytest.raises(TemplateError, match="needs a mapping"):
+        r(env, "{{ [1] | dictsort }}")
+    with pytest.raises(TemplateError, match="'key' or 'value'"):
+        r(env, "{{ d | dictsort(by='size') }}", d=d)
