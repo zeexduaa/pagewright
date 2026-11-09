@@ -952,6 +952,35 @@ def _safe_range(*args: int) -> range:
 # ---- Filters -------------------------------------------------------------------------------
 
 
+ATTR_OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
+    "==": lambda a, b: a == b, "!=": lambda a, b: a != b,
+    "<": lambda a, b: a < b, "<=": lambda a, b: a <= b,
+    ">": lambda a, b: a > b, ">=": lambda a, b: a >= b,
+    "in": lambda a, b: a in b, "not in": lambda a, b: a not in b,
+}
+
+
+def _attr_matches(item: Any, attribute: str, args: tuple[Any, ...]) -> bool:
+    """selectattr("draft") is truthiness, selectattr("section", "posts") is equality,
+    selectattr("weight", ">", 5) uses an operator."""
+    value = item
+    for part in attribute.split("."):
+        value = get_attr(value, part)
+    if not args:
+        return bool(value) and not isinstance(value, Undefined)
+    if len(args) == 1:
+        return value == args[0]
+    if len(args) == 2 and args[0] in ATTR_OPERATORS:
+        if isinstance(value, Undefined) or value is None:
+            return False
+        try:
+            return ATTR_OPERATORS[args[0]](value, args[1])
+        except TypeError:
+            raise TemplateError(f"can't compare {attribute}={value!r} {args[0]} {args[1]!r}") from None
+    raise TemplateError(f"selectattr/rejectattr take (attribute), (attribute, value) or (attribute, operator, value); "
+                        f"operators: {', '.join(ATTR_OPERATORS)}")
+
+
 def _sort_key(attribute: str | None) -> Callable[[Any], Any]:
     def key(item: Any) -> Any:
         value = item
@@ -1046,8 +1075,8 @@ FILTERS: dict[str, Callable[..., Any]] = {
     "batch": _batch,
     "groupby": _groupby,
     "map": lambda v, attribute: [get_attr(i, attribute) for i in v],
-    "selectattr": lambda v, attribute, value=True: [i for i in v if get_attr(i, attribute) == value],
-    "rejectattr": lambda v, attribute, value=True: [i for i in v if get_attr(i, attribute) != value],
+    "selectattr": lambda v, attribute, *args: [i for i in v if _attr_matches(i, attribute, args)],
+    "rejectattr": lambda v, attribute, *args: [i for i in v if not _attr_matches(i, attribute, args)],
     "slice": lambda v, start=0, stop=None: list(v)[start:stop],
     "truncate": _truncate,
     "wordcount": _wordcount,

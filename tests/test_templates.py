@@ -264,3 +264,21 @@ def test_range_is_limited(env):
 def test_undefined_behaves_quietly():
     u = Undefined("x")
     assert str(u) == "" and not u and list(u) == [] and len(u) == 0
+
+
+def test_selectattr_and_rejectattr_forms(env):
+    items = [{"name": "a", "draft": True, "weight": 1, "section": "posts"},
+             {"name": "b", "draft": False, "weight": 7, "section": "notes"},
+             {"name": "c", "weight": 9, "section": "posts"}]
+    names = lambda expr: r(env, "{{ items | " + expr + " | map('name') | join(',') }}", items=items)
+    assert names("selectattr('draft')") == "a"
+    assert names("rejectattr('draft')") == "b,c"
+    assert names("selectattr('section', 'posts')") == "a,c"
+    assert names("selectattr('section', '==', 'posts')") == "a,c"
+    assert names("selectattr('weight', '>', 5)") == "b,c"
+    assert names("selectattr('section', 'in', ['notes'])") == "b"
+    assert names("rejectattr('weight', '<=', 1)") == "b,c"
+    with pytest.raises(TemplateError, match="operator"):
+        names("selectattr('weight', '~', 1, 2)")
+    with pytest.raises(TemplateError, match="can't compare"):
+        names("selectattr('section', '>', 3)")

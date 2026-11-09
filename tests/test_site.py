@@ -264,3 +264,39 @@ def test_config_errors(tmp_path, toml, message):
 def test_base_url_override_for_previews(site_dir):
     Site(site_dir, base_url="http://localhost:9000").build()
     assert "http://localhost:9000/posts/" in read(site_dir, "sitemap.xml")
+
+
+def test_plugin_filters_can_be_a_dict_or_a_function(site_dir):
+    write(site_dir / "plugins/fn.py", "def filters():\n    return {'shout': lambda s: str(s).upper()}\n\n"
+                                      "def template_globals():\n    return {'answer': 42}\n")
+    write(site_dir / "templates/partials/footer.html", "<footer>{{ 'hi' | shout }} {{ answer }}</footer>")
+    toml = site_dir / "pagewright.toml"
+    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["fn"]'))
+    build(site_dir)
+    assert "<footer>HI 42</footer>" in read(site_dir, "about/index.html")
+
+    write(site_dir / "plugins/fn.py", "filters = {'shout': 'not a function'}\n")
+    with pytest.raises(BuildError, match="every filter must be a function"):
+        build(site_dir)
+
+
+def test_editing_a_plugin_rerenders_pages(site_dir):
+    write(site_dir / "plugins/tag.py", "def on_page_html(page, html):\n    return html + '<!-- v1 -->'\n")
+    toml = site_dir / "pagewright.toml"
+    toml.write_text(toml.read_text().replace('# plugins = ["word_count"]', 'plugins = ["tag"]'))
+    build(site_dir)
+    write(site_dir / "plugins/tag.py", "def on_page_html(page, html):\n    return html + '<!-- v2 -->'\n")
+    report = build(site_dir)
+    assert "about/index.html" in report.rendered
+    assert "<!-- v2 -->" in read(site_dir, "about/index.html")
+
+
+def test_lower_weight_comes_first_in_menu_and_sections(site_dir):
+    write(site_dir / "content/contact.md", '+++\ntitle = "Contact"\nweight = 1\n+++\nHi.\n')
+    write(site_dir / "content/zebra.md", '+++\ntitle = "Zebra"\nweight = 1\n+++\nHi.\n')
+    write(site_dir / "content/posts/pinned.md", '+++\ntitle = "Pinned"\ndate = 2020-01-01\nweight = -1\n+++\nOld but first.\n')
+    site = Site(site_dir)
+    site.load()
+    menu = [p.title for p in site.site_context()["menu"]]
+    assert menu == ["Contact", "Zebra", "About"]  # About has weight 10
+    assert site.sections["posts"][0].title == "Pinned"

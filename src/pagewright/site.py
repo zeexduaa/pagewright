@@ -20,7 +20,6 @@ re-renders just that post (and the lists, if its summary changed).
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import shutil
 import time
@@ -148,15 +147,28 @@ class Site:
             path = self.root / "plugins" / f"{name}.py"
             if not path.is_file():
                 raise BuildError(f"plugin {name!r} not found (expected {path})")
-            spec = importlib.util.spec_from_file_location(f"pagewright_plugin_{name}", path)
-            assert spec and spec.loader
-            module = importlib.util.module_from_spec(spec)
+            # Compiled from source every time, not through importlib's .pyc cache: that cache checks the
+            # source's mtime in whole seconds and its size, so a quick same-size edit (common while
+            # `pagewright serve` is running) would silently run the old code.
+            module = ModuleType(f"pagewright_plugin_{name}")
+            module.__file__ = str(path)
             try:
-                spec.loader.exec_module(module)
+                code = compile(path.read_text(encoding="utf-8"), str(path), "exec")
+                exec(code, module.__dict__)
             except Exception as exc:
                 raise BuildError(f"plugin {name!r} failed to load: {exc}") from exc
-            self.env.filters.update(getattr(module, "filters", {}) or {})
-            self.env.globals.update(getattr(module, "template_globals", {}) or {})
+            for attr, target in (("filters", self.env.filters), ("template_globals", self.env.globals)):
+                value = getattr(module, attr, None) or {}
+                if callable(value):  # `def filters(): return {...}` works as well as `filters = {...}`
+                    try:
+                        value = value() or {}
+                    except Exception as exc:
+                        raise BuildError(f"plugin {name!r} failed in {attr}: {exc}") from exc
+                if not isinstance(value, dict) or not all(isinstance(k, str) for k in value):
+                    raise BuildError(f"plugin {name!r}: {attr} must be a dict of names to values")
+                if attr == "filters" and not all(callable(f) for f in value.values()):
+                    raise BuildError(f"plugin {name!r}: every filter must be a function")
+                target.update(value)
             self.plugins.append(module)
         self._hook("on_config", self.config)
 
@@ -211,7 +223,7 @@ class Site:
         for page in self.pages:
             if page.section and not page.is_section_index:
                 sections.setdefault(page.section, []).append(page)
-        return {name: sorted(items, key=lambda p: (-p.weight, *_neg_date(p))) for name, items in sorted(sections.items())}
+        return {name: sorted(items, key=lambda p: (p.weight, *_neg_date(p))) for name, items in sorted(sections.items())}
 
     @property
     def tags(self) -> dict[str, list[Page]]:
@@ -235,7 +247,7 @@ class Site:
             "tags": [{"name": t, "url": f"/tags/{slugify(t)}/", "count": len(ps), "pages": ps}
                      for t, ps in self.tags.items()],
             "menu": sorted((p for p in self.pages if not p.section and p.url != "/" and p.extra.get("menu", True)),
-                           key=lambda p: (-p.weight, p.title.lower())),
+                           key=lambda p: (p.weight, p.title.lower())),
             "data": self.data,
         }
 
