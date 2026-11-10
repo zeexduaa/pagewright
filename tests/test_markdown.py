@@ -214,7 +214,7 @@ def test_headings_title_and_toc():
 def test_slugify():
     assert slugify("Hello, World!") == "hello-world"
     assert slugify("  Ünïcödé   ok ") == "ünïcödé-ok"
-    assert slugify("!!!") == "section"
+    assert slugify("!!!") == "exclamation-mark-exclamation-mark-exclamation-mark"
     assert slugify("a_b--c") == "a-b-c"
 
 
@@ -336,3 +336,13 @@ def test_smart_punctuation_leaves_code_and_html_alone():
     assert '<a title="t">“in”</a>' in out
     assert "<strong>“bold”</strong>" in out
     assert render("```\n\"a\" -- b\n```", smart_punctuation=True) == "<pre><code>&quot;a&quot; -- b\n</code></pre>"
+
+
+def test_slugify_spells_out_text_without_letters():
+    assert slugify("🎉") == "party-popper"
+    assert slugify("?") == "question-mark"
+    assert slugify("❤️") == "heavy-black-heart"  # the variation selector is dropped
+    assert slugify("Hello 🎉") == "hello"        # text with letters keeps the usual slug
+    assert slugify("C++") == "c"
+    assert slugify("") == "section" and slugify("   ") == "section"
+    assert len(slugify("!" * 200)) <= 80

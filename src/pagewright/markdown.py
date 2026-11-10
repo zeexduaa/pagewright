@@ -82,10 +82,18 @@ def escape(text: str) -> str:
 
 
 def slugify(text: str) -> str:
-    """'Hello, World!' -> 'hello-world'; keeps letters from any language."""
+    """'Hello, World!' -> 'hello-world'; keeps letters from any language.
+
+    Text with no letters or digits at all is spelled out by character name, so a tag like
+    "🎉" becomes "party-popper" rather than nothing (two such tags used to collide)."""
     text = unicodedata.normalize("NFKC", text).lower()
-    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
-    return re.sub(r"[\s_-]+", "-", text).strip("-") or "section"
+    slug = re.sub(r"[\s_-]+", "-", re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)).strip("-")
+    if slug or not text.strip():
+        return slug or "section"
+    names = [unicodedata.name(ch, f"u{ord(ch):04x}") for ch in text
+             if not ch.isspace() and unicodedata.category(ch) not in ("Mn", "Cf")]  # skip joiners, selectors
+    spelled = re.sub(r"[^a-z0-9]+", "-", " ".join(names).lower()).strip("-")
+    return spelled[:80].rstrip("-") or "section"
 
 
 # ---- Inline --------------------------------------------------------------------------------

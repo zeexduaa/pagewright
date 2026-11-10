@@ -449,3 +449,13 @@ def test_smart_punctuation_setting(site_dir):
     assert "It’s “here” – now." in read(site_dir, "quotes/index.html")
     with pytest.raises(ConfigError, match="smart_punctuation must be true or false"):
         parse_config("[markdown]\nsmart_punctuation = 1", site_dir)
+
+
+def test_emoji_only_tags_and_file_names_get_distinct_urls(site_dir):
+    write(site_dir / "content/posts/2026-04-03-e.md", '+++\ntitle = "E"\ntags = ["🎉", "?"]\n+++\nx\n')
+    write(site_dir / "content/notes/🎉.md", "Party.\n")
+    build(site_dir)
+    assert "E" in read(site_dir, "tags/party-popper/index.html")
+    assert "E" in read(site_dir, "tags/question-mark/index.html")
+    assert (site_dir / "public/notes/party-popper/index.html").is_file()
+    assert not (site_dir / "public/tags/section").exists()
