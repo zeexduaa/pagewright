@@ -91,6 +91,7 @@ def check_links(output: str | Path, base_url: str = "") -> list[Problem]:
     pages = {p.relative_to(output).as_posix(): p for p in sorted(output.rglob("*.html"))}
     scanned = {rel: _scan(path) for rel, path in pages.items()}
     base = urlsplit(base_url) if base_url else None
+    base_path = base.path.rstrip("/") if base else ""
     problems: list[Problem] = []
 
     for rel, page in scanned.items():
@@ -100,12 +101,19 @@ def check_links(output: str | Path, base_url: str = "") -> list[Problem]:
             parts = urlsplit(link)
             if parts.scheme or parts.netloc:
                 same_site = base is not None and parts.netloc == base.netloc and parts.scheme in ("http", "https")
-                if not same_site:
-                    continue  # external: not checked yet
-                parts = parts._replace(path=parts.path[len(base.path.rstrip("/")):] or "/")
+                inside = not base_path or parts.path == base_path or parts.path.startswith(base_path + "/")
+                if not same_site or not inside:
+                    continue  # external (another host, or another site on this host): not checked yet
+                pass  # same host: checked like a root-relative link below
             if not parts.path and not parts.fragment:
                 continue
             path = unquote(parts.path)
+            if base_path and path.startswith("/"):
+                # The site lives under a path: /blog/about/ is about/index.html in the output.
+                if path != base_path and not path.startswith(base_path + "/"):
+                    problems.append(Problem(rel, link, f"outside the site's path {base_path}/"))
+                    continue
+                path = path[len(base_path):] or "/"
             target = rel if not path else _target_file(output, rel, path)
             if target is None:
                 problems.append(Problem(rel, link, "points outside the site"))

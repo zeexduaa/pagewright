@@ -5,6 +5,7 @@ from __future__ import annotations
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Any
 
 CONFIG_FILE = "pagewright.toml"
@@ -42,6 +43,11 @@ class Config:
     @property
     def output_path(self) -> Path:
         return self.root / self.output_dir
+
+    @property
+    def base_path(self) -> str:
+        """The path part of base_url without a trailing slash: "/blog" for https://x.github.io/blog/, else ""."""
+        return urlsplit(self.base_url).path.rstrip("/")
 
     def absolute_url(self, path: str) -> str:
         return self.base_url.rstrip("/") + "/" + path.lstrip("/")

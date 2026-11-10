@@ -31,6 +31,9 @@ First version. Everything is new:
 
 ### Fixed before release
 
+- Sites whose `base_url` has a path (GitHub Pages project sites) linked every page, stylesheet and script from the domain root, so they loaded broken. Root-relative links now get the path, as do search results and the link checker.
+- `serve` didn't redirect `/about` to `/about/`, and `HEAD` requests disagreed with `GET`.
+
 - `sort("title")` sorted in reverse and `sort("date", reverse=true)` crashed; `sort` now takes the attribute first, as documented, and ignores case.
 - `"3.7" | int` gave 0, and `"it's" | title` gave "It'S".
 - Emoji- or punctuation-only tags and file names all became `section`; they're now spelled out (🎉 → `party-popper`).

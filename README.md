@@ -78,7 +78,7 @@ Every build writes:
 title = "My Site"
 description = "Notes, posts and projects."
 author = "Your Name"
-base_url = "https://example.com"
+base_url = "https://example.com"   # or "https://you.github.io/project/"
 language = "en"
 theme = "default"
 posts_per_page = 10        # 1–1000
@@ -95,6 +95,8 @@ github = "zeexduaa"        # anything; templates see site.extra.github
 ```
 
 Unknown settings are an error, so typos don't go unnoticed.
+
+If `base_url` has a path (as GitHub Pages project sites do), keep writing links from the site root (`/about/`, `/style.css`) in templates and Markdown. When writing pages, pagewright adds the path to every root-relative `href`, `src`, `action` and `poster`, and to search results. Feed content always gets absolute links.
 
 ### Front matter
 

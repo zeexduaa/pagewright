@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import time
 import tomllib
@@ -30,6 +31,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from types import ModuleType
 from typing import Any
+from urllib.parse import urlsplit
 from xml.sax.saxutils import escape as xml_escape
 
 from . import __version__
@@ -118,6 +120,15 @@ def _digest(*parts: Any) -> str:
 
 
 DATA_DIR = "data"
+ROOT_LINK = re.compile(r"""(\b(?:href|src|action|poster)\s*=\s*["'])/(?![/\\])""", re.IGNORECASE)
+
+
+def prefix_links(html: str, prefix: str) -> str:
+    """Puts ``prefix`` in front of root-relative links: href="/about/" -> href="/blog/about/".
+
+    Templates and Markdown link from the site root; when the site is hosted under a path
+    (base_url = "https://you.github.io/blog/"), this makes those links work there."""
+    return ROOT_LINK.sub(lambda m: m.group(1) + prefix.rstrip("/") + "/", html) if prefix else html
 
 
 def _stable(value: Any) -> str:
@@ -459,6 +470,8 @@ class Site:
             except TemplateError as exc:
                 raise BuildError(f"{exc} (while rendering {path})") from None
             report.timings[path] = time.perf_counter() - began
+            if path.endswith(".html"):
+                html = prefix_links(html, self.config.base_path)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(html, encoding="utf-8")
             report.rendered.append(path)
@@ -569,7 +582,7 @@ class Site:
                 f"    <id>{xml_escape(link)}</id>\n    <published>{stamp(p.date)}</published>\n"
                 f"    <updated>{stamp(p.updated or p.date)}</updated>\n    {categories}\n"
                 f"    <summary type=\"html\">{xml_escape(str(p.summary))}</summary>\n"
-                f"    <content type=\"html\">{xml_escape(str(p.content))}</content>\n  </entry>"
+                f"    <content type=\"html\">{xml_escape(self._absolute_links(str(p.content)))}</content>\n  </entry>"
             )
         author = f"  <author><name>{xml_escape(cfg.author)}</name></author>\n" if cfg.author else ""
         return (
@@ -595,13 +608,18 @@ class Site:
         return ('<?xml version="1.0" encoding="utf-8"?>\n'
                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(urls) + "\n</urlset>\n")
 
+    def _absolute_links(self, html: str) -> str:
+        """Feed readers have no reliable base URL, so links in feed content are made absolute."""
+        root = urlsplit(self.config.base_url)
+        return prefix_links(html, f"{root.scheme}://{root.netloc}{self.config.base_path}")
+
     def _search_index(self) -> str:
         from .templates import FILTERS
 
         striptags = FILTERS["striptags"]
         entries = [{
             "title": p.title,
-            "url": p.url,
+            "url": self.config.base_path + p.url,
             "date": p.date.isoformat() if p.date else None,
             "tags": p.tags,
             "summary": striptags(p.summary)[:300],

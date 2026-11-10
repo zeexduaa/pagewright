@@ -459,3 +459,32 @@ def test_emoji_only_tags_and_file_names_get_distinct_urls(site_dir):
     assert "E" in read(site_dir, "tags/question-mark/index.html")
     assert (site_dir / "public/notes/party-popper/index.html").is_file()
     assert not (site_dir / "public/tags/section").exists()
+
+
+def test_site_under_a_path(site_dir):
+    """GitHub Pages project sites live at https://you.github.io/project/: every root-relative
+    link (theme and Markdown alike) has to include /project/."""
+    write(site_dir / "content/links.md", '+++\ntitle = "Links"\n+++\n[about](/about/) ![i](/img.png) '
+                                         '[ext](https://example.org/) [proto](//cdn.example.org/x.js) [rel](../)\n')
+    write(site_dir / "static/img.png", "png")
+    build(site_dir, base_url="https://you.github.io/blog/")
+    home = read(site_dir, "index.html")
+    assert 'href="/blog/style.css"' in home and 'src="/blog/search.js"' in home
+    assert 'href="/blog/posts/hello-world/"' in home and 'href="/about/"' not in home
+    links = read(site_dir, "links/index.html")
+    assert 'href="/blog/about/"' in links and 'src="/blog/img.png"' in links
+    assert 'href="https://example.org/"' in links and 'href="//cdn.example.org/x.js"' in links and 'href="../"' in links
+    assert '"url":"/blog/about/"' in read(site_dir, "search-index.json")
+    feed = read(site_dir, "feed.xml")
+    assert "https://you.github.io/blog/posts/hello-world/" in feed
+    # Output paths don't change: the host puts the folder under /blog/.
+    assert (site_dir / "public/about/index.html").is_file() and not (site_dir / "public/blog").exists()
+
+    from pagewright.check import check_links
+    assert check_links(site_dir / "public", "https://you.github.io/blog/") == []
+
+
+def test_feed_content_links_are_absolute(site_dir):
+    write(site_dir / "content/posts/2026-05-01-l.md", '+++\ntitle = "L"\n+++\nSee [about](/about/).\n')
+    build(site_dir)
+    assert '&lt;a href="https://example.com/about/"&gt;about&lt;/a&gt;' in read(site_dir, "feed.xml")

@@ -1,5 +1,9 @@
-// pagewright site search: loads /search-index.json once and searches it in the browser.
+// pagewright site search: loads search-index.json once and searches it in the browser.
 (function () {
+  // The index sits next to this script, which also works when the site lives under a path
+  // (https://you.github.io/blog/search.js -> .../blog/search-index.json).
+  const script = document.currentScript;
+  const indexUrl = new URL("search-index.json", script ? script.src : location.origin + "/").href;
   const input = document.getElementById("search-input");
   const list = document.getElementById("search-results");
   if (!input || !list) return;
@@ -9,7 +13,7 @@
   function load() {
     if (pages) return Promise.resolve(pages);
     if (!loading) {
-      loading = fetch("/search-index.json")
+      loading = fetch(indexUrl)
         .then((r) => (r.ok ? r.json() : { pages: [] }))
         .then((data) => (pages = data.pages || []))
         .catch(() => (pages = []));

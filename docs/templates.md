@@ -138,6 +138,10 @@ Plugins can add filters. See [plugins.md](plugins.md).
 
 `defined`, `undefined`, `none`, `string`, `number`, `iterable`, `odd`, `even`. Any of them can be negated with `is not`.
 
+## Links and base_url
+
+Link from the site root: `href="{{ page.url }}"`, `href="/style.css"`. If `base_url` includes a path (`https://you.github.io/blog/`), root-relative `href`, `src`, `action` and `poster` attributes in the rendered HTML get that path added. URLs you build in JavaScript or `srcset` don't, so use `site.base_url` for those.
+
 ## Safety
 
 - Output is escaped unless the value is safe (`content`, `toc`, `summary`, `| safe`, the result of `tojson`).
