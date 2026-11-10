@@ -31,6 +31,10 @@ First version. Everything is new:
 
 ### Fixed before release
 
+- `sort("title")` sorted in reverse and `sort("date", reverse=true)` crashed; `sort` now takes the attribute first, as documented, and ignores case.
+- `"3.7" | int` gave 0, and `"it's" | title` gave "It'S".
+- Emoji- or punctuation-only tags and file names all became `section`; they're now spelled out (🎉 → `party-popper`).
+
 - A `summary` in front matter ignored `allow_html = false`; it now uses the site's Markdown settings.
 
 - Values plugins put in `site.data` (such as the starter's word count) weren't part of the cache fingerprint, so pages showing them could go stale.

@@ -1044,6 +1044,49 @@ def _attr_matches(item: Any, attribute: str, args: tuple[Any, ...]) -> bool:
                         f"operators: {', '.join(ATTR_OPERATORS)}")
 
 
+def _sort(value: Any, *args: Any, attribute: str | None = None, reverse: bool = False,
+          case_sensitive: bool = False) -> list[Any]:
+    """sort, sort("title"), sort("date", reverse=true), or Jinja's order: sort(true, attribute="date").
+    Text compares without regard to case unless case_sensitive=true; missing values sort first."""
+    for arg in args:
+        if isinstance(arg, bool):
+            reverse = arg
+        elif isinstance(arg, str) and attribute is None:
+            attribute = arg
+        else:
+            raise TemplateError(f"sort takes an attribute name and/or reverse=true, not {arg!r}")
+    key = _sort_key(attribute)
+    if not case_sensitive:
+        plain = key
+        key = lambda item: (lambda k: (k[0], k[1].casefold()) if isinstance(k[1], str) else k)(plain(item))  # noqa: E731
+    try:
+        return sorted(value, key=key, reverse=reverse)
+    except TypeError:
+        raise TemplateError(f"sort can't compare these values{f' of {attribute}' if attribute else ''} "
+                            "(mixed kinds, like numbers and text?)") from None
+
+
+def _to_number(value: Any, kind: type, default: Any) -> Any:
+    """int("3.7") -> 3, float("1e3") -> 1000.0; anything unreadable -> default."""
+    if isinstance(value, bool):
+        return kind(value)
+    if isinstance(value, int) or (isinstance(value, str) and re.fullmatch(r"\s*[-+]?\d+\s*", value)):
+        return kind(int(value))  # exact, even for very long numbers
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number != number or number in (float("inf"), float("-inf")):  # nan and infinity aren't numbers to show
+        return default
+    return kind(number)
+
+
+def _title(text: str) -> str:
+    """Capitalizes each word: "it's a dog-friendly cafe" -> "It's A Dog-Friendly Cafe"
+    (str.title() would give "It'S")."""
+    return re.sub(r"(^|[\s\-(\[\"“‘/])(\w)", lambda m: m.group(1) + m.group(2).upper(), text.lower())
+
+
 def _sort_key(attribute: str | None) -> Callable[[Any], Any]:
     def key(item: Any) -> Any:
         value = item
@@ -1159,7 +1202,7 @@ def _wordcount(value: Any) -> int:
 FILTERS: dict[str, Callable[..., Any]] = {
     "upper": lambda v: str(v).upper(),
     "lower": lambda v: str(v).lower(),
-    "title": lambda v: str(v).title(),
+    "title": lambda v: _title(str(v)),
     "capitalize": lambda v: str(v).capitalize(),
     "trim": lambda v: str(v).strip(),
     "length": lambda v: len(v),
@@ -1169,7 +1212,7 @@ FILTERS: dict[str, Callable[..., Any]] = {
     "first": lambda v: next(iter(v), Undefined("first")),
     "last": lambda v: list(v)[-1] if list(v) else Undefined("last"),
     "reverse": lambda v: v[::-1] if isinstance(v, str) else list(reversed(list(v))),
-    "sort": lambda v, reverse=False, attribute=None: sorted(v, key=_sort_key(attribute), reverse=reverse),
+    "sort": lambda v, *args, **kwargs: _sort(v, *args, **kwargs),
     "unique": lambda v: list(dict.fromkeys(v)),
     "list": lambda v: list(v),
     "batch": _batch,
@@ -1193,8 +1236,8 @@ FILTERS: dict[str, Callable[..., Any]] = {
     "urlencode": lambda v: urllib.parse.quote(str(v), safe=""),
     "tojson": lambda v: Markup(json.dumps(v, default=str).replace("<", "\\u003c").replace(">", "\\u003e")
                                .replace("&", "\\u0026")),
-    "int": lambda v, default=0: int(v) if str(v).lstrip("-").isdigit() else default,
-    "float": lambda v, default=0.0: float(v) if re.fullmatch(r"-?\d+(\.\d+)?", str(v)) else default,
+    "int": lambda v, default=0: _to_number(v, int, default),
+    "float": lambda v, default=0.0: _to_number(v, float, default),
     "string": lambda v: str(v),
     "round": lambda v, precision=0: round(float(v), precision),
     "abs": lambda v: abs(v),

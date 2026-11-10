@@ -102,7 +102,7 @@ For posts there's also `prev` (the older post in the same section), `next` (the 
 
 | Filter | Example | Notes |
 | --- | --- | --- |
-| `abs`, `int`, `float`, `round(n)` | `x | round(1)` | |
+| `abs`, `int(default=0)`, `float(default=0.0)`, `round(n)` | `"3.7" | int` → 3 | text that isn't a number gives the default |
 | `batch(n, fill=none)` | `items | batch(3)` | lists of n |
 | `capitalize`, `lower`, `upper`, `title` | | |
 | `count`, `length` | `posts | length` | |
@@ -121,7 +121,7 @@ For posts there's also `prev` (the older post in the same section), `next` (the 
 | `reading_time(wpm=200)` | `content | reading_time` | minutes, at least 1 |
 | `rejectattr`, `selectattr` | `pages | selectattr("draft")`, `posts | selectattr("section", "posts")`, `pages | selectattr("weight", ">", 5)` | one argument: truthy; two: equal; three: operator `== != < <= > >= in` `not in` |
 | `replace(old, new)` | | |
-| `reverse`, `sort(attribute=none, reverse=false)`, `unique` | `pages | sort("title")` | `sort("date", reverse=true)` |
+| `reverse`, `sort(attribute=none, reverse=false, case_sensitive=false)`, `unique` | `pages | sort("title")`, `posts | sort("date", reverse=true)` | text ignores case by default; missing values come first; Jinja's `sort(true, attribute="date")` also works |
 | `safe` | | marks text as HTML; use only on trusted text |
 | `slice(start, stop)` | `posts | slice(0, 5)` | |
 | `slugify` | | `"Hello World!"` → `hello-world` |

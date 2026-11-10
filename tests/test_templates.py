@@ -359,3 +359,25 @@ def test_dictsort_and_items(env):
         r(env, "{{ [1] | dictsort }}")
     with pytest.raises(TemplateError, match="'key' or 'value'"):
         r(env, "{{ d | dictsort(by='size') }}", d=d)
+
+
+def test_sort_accepts_attribute_first_as_documented(env):
+    posts = [{"t": "b", "d": 2}, {"t": "C", "d": None}, {"t": "a", "d": 3}]
+    titles = lambda expr: r(env, "{{ posts | " + expr + " | map('t') | join }}", posts=posts)
+    assert titles("sort('t')") == "abC"                       # used to come out reversed
+    assert titles("sort('d', reverse=true)") == "abC"         # used to crash
+    assert titles("sort(attribute='d')") == "Cba"             # missing values first
+    assert titles("sort(true, attribute='t')") == "Cba"       # Jinja's argument order
+    assert titles("sort('t', case_sensitive=true)") == "Cab"
+    assert r(env, "{{ ['B', 'a', 'C'] | sort | join }}") == "aBC"
+    with pytest.raises(TemplateError, match="can't compare"):
+        r(env, "{{ [1, 'a'] | sort }}")
+    with pytest.raises(TemplateError, match="attribute name"):
+        r(env, "{{ [1] | sort(3) }}")
+
+
+def test_number_and_title_filters(env):
+    assert r(env, "{{ '3.7' | int }} {{ '-2' | int }} {{ 'x' | int }} {{ 'x' | int(5) }} {{ 4.9 | int }}") == "3 -2 0 5 4"
+    assert r(env, "{{ '1e3' | float }} {{ ' 2.5 ' | float }} {{ 'nan' | float }} {{ true | int }}") == "1000.0 2.5 0.0 1"
+    assert r(env, "{{ '12345678901234567890' | int }}") == "12345678901234567890"
+    assert r(env, "{{ \"it's a dog-friendly cafe\" | title }}") == "It&#x27;s A Dog-Friendly Cafe"
