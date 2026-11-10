@@ -158,3 +158,28 @@ def test_change_right_after_start_is_not_missed(site_dir):
         assert wait_until(lambda: "Saved straight away" in get(srv, "/about/")[2])
     finally:
         srv.stop()
+
+
+def request(srv, method, path):
+    conn = http.client.HTTPConnection(srv.host, srv.port, timeout=5)
+    conn.request(method, path)
+    resp = conn.getresponse()
+    body = resp.read()
+    conn.close()
+    return resp, body
+
+
+def test_folder_without_slash_redirects(server):
+    resp, _ = request(server, "GET", "/about?x=1")
+    assert resp.status == 301 and resp.getheader("Location") == "/about/?x=1"
+    resp, _ = request(server, "GET", "/feed.xml")
+    assert resp.status == 200  # files aren't redirected
+
+
+def test_head_matches_get(server):
+    for path in ("/about/", "/nope/", "/style.css"):
+        got, body = request(server, "GET", path)
+        head, empty = request(server, "HEAD", path)
+        assert empty == b"" and head.status == got.status
+        assert head.getheader("Content-Length") == got.getheader("Content-Length") == str(len(body))
+        assert head.getheader("Content-Type") == got.getheader("Content-Type")

@@ -103,33 +103,46 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self) -> None:
-        path = self.path.split("?", 1)[0]
-        if path == EVENTS_PATH:
+        self._respond(head=False)
+
+    def do_HEAD(self) -> None:
+        self._respond(head=True)
+
+    def _respond(self, head: bool) -> None:
+        path, _, query = self.path.partition("?")
+        if path == EVENTS_PATH and not head:
             self._events()
             return
-        if self.state.error is not None and (path.endswith("/") or path.endswith(".html")):
-            self._send(500, error_page(self.state.error))
-            return
         target = Path(self.translate_path(path))
+        if target.is_dir() and not path.endswith("/"):
+            # /about -> /about/, as static hosts do, so relative links on the page resolve correctly.
+            self.send_response(301)
+            self.send_header("Location", path + "/" + (f"?{query}" if query else ""))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if target.is_dir():
             target = target / "index.html"
+        if self.state.error is not None and target.suffix == ".html":
+            self._send(500, error_page(self.state.error), head)
+            return
         if target.suffix == ".html" and target.is_file():
-            body = target.read_bytes()
-            self._send(200, inject(body))
+            self._send(200, inject(target.read_bytes()), head)
             return
         if not target.exists():
             missing = self.output / "404.html"
             body = inject(missing.read_bytes()) if missing.is_file() else b"<h1>Not found</h1>" + RELOAD_SCRIPT.encode()
-            self._send(404, body)
+            self._send(404, body, head)
             return
-        super().do_GET()
+        super().do_HEAD() if head else super().do_GET()
 
-    def _send(self, status: int, body: bytes) -> None:
+    def _send(self, status: int, body: bytes, head: bool = False) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        if not head:
+            self.wfile.write(body)
 
     def _events(self) -> None:
         self.send_response(200)
