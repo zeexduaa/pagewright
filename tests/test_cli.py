@@ -34,6 +34,21 @@ def test_new_refuses_a_folder_with_files_unless_forced(tmp_path, capsys):
     assert code == 0 and (tmp_path / "notes.txt").read_text(encoding="utf-8") == "mine"
 
 
+def test_new_force_never_overwrites_existing_files(tmp_path, capsys):
+    run(capsys, "new", str(tmp_path))
+    write(tmp_path / "pagewright.toml", 'title = "Mine"\n')
+    write(tmp_path / "content/about.md", "My own about page.\n")
+    write(tmp_path / ".gitignore", "custom\n")
+    (tmp_path / "content/posts/2026-01-15-hello-world.md").unlink()  # deleted on purpose? it comes back
+
+    code, out, _ = run(capsys, "new", str(tmp_path), "--force")
+    assert code == 0 and "Kept" in out and "pagewright.toml" in out
+    assert (tmp_path / "pagewright.toml").read_text(encoding="utf-8") == 'title = "Mine"\n'
+    assert (tmp_path / "content/about.md").read_text(encoding="utf-8") == "My own about page.\n"
+    assert (tmp_path / ".gitignore").read_text(encoding="utf-8") == "custom\n"
+    assert (tmp_path / "content/posts/2026-01-15-hello-world.md").is_file()
+
+
 def test_build_is_incremental_and_force_rerenders(site_dir, capsys):
     run(capsys, "build", "-s", str(site_dir))
     _, out, _ = run(capsys, "build", "-s", str(site_dir))

@@ -30,13 +30,35 @@ def cmd_new(args: argparse.Namespace) -> int:
     if target.exists() and any(target.iterdir()) and not args.force:
         print(f"pagewright: {target} isn't empty (use --force to add the starter files anyway)", file=sys.stderr)
         return 1
-    shutil.copytree(SCAFFOLD, target, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".gitkeep"))
+    # Never overwrite: with --force, files that already exist are kept as they are.
+    kept = _copy_missing(SCAFFOLD, target) + _copy_missing(BUILTIN_THEMES / "default", target / "themes" / "default")
     for folder in ("static", "templates"):
-        (target / folder).mkdir(exist_ok=True)
-    shutil.copytree(BUILTIN_THEMES / "default", target / "themes" / "default", dirs_exist_ok=True)
-    (target / ".gitignore").write_text("public/\n.pagewright-cache.json\n__pycache__/\n", encoding="utf-8")
+        (target / folder).mkdir(parents=True, exist_ok=True)
+    gitignore = target / ".gitignore"
+    if gitignore.exists():
+        kept.append(gitignore)
+    else:
+        gitignore.write_text("public/\n.pagewright-cache.json\n__pycache__/\n", encoding="utf-8")
+    if kept:
+        names = ", ".join(str(p.relative_to(target)) for p in kept[:5]) + (f" and {len(kept) - 5} more" if len(kept) > 5 else "")
+        print(f"Kept {len(kept)} existing file(s) unchanged: {names}")
     print(f"Created a new site in {target}.\n\nNext:\n  cd {target}\n  pagewright serve")
     return 0
+
+
+def _copy_missing(source: Path, target: Path) -> list[Path]:
+    """Copies files from source into target, skipping any that already exist. Returns the skipped ones."""
+    kept = []
+    for path in sorted(source.rglob("*")):
+        if not path.is_file() or path.name == ".gitkeep" or "__pycache__" in path.parts:
+            continue
+        dest = target / path.relative_to(source)
+        if dest.exists():
+            kept.append(dest)
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+    return kept
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -115,7 +137,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("new", help="create a new site")
     p.add_argument("path")
-    p.add_argument("--force", action="store_true", help="add files even if the folder isn't empty")
+    p.add_argument("--force", action="store_true",
+                   help="add the starter files even if the folder isn't empty (existing files are never overwritten)")
     p.set_defaults(func=cmd_new)
 
     p = sub.add_parser("build", help="build the site into the output folder", parents=[site])
